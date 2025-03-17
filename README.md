@@ -46,6 +46,7 @@ pip install -r requirements.txt
 ```
 ---
 
+PS: liunx has been tested to install directly, but windwos or mac have not been tested, so there is no way to determine if there might be a problem.
 ## Usage
 
 BioMaster allows you to run and automate bioinformatics tasks using the `Biomaster` class. Here's a basic usage example:
