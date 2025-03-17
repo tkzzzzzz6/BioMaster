@@ -1,0 +1,8 @@
+{
+    "shell": [],
+    "analyze": "The result shows a successful execution of PLINK homozyg analysis with output files generated in the expected location, no errors encountered, and all requirements met",
+    "output_filename": [
+        "./output/002/roh_results.hom"
+    ],
+    "stats": true
+}

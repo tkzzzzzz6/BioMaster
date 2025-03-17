@@ -1,0 +1,17 @@
+{
+    "plan": [
+        {
+            "step_number": 1,
+            "description": "In this step, we will perform an LD decay analysis using PLINK. We will use the pruned genotype data provided in the bed, bim, and fam files to calculate pairwise linkage disequilibrium (r2) between SNPs over a sliding window across the genome. The command will be configured with a large ld-window size (number of SNPs) and a specific physical distance cutoff (e.g. 500 kb) to capture LD decay across distance. The output file (ld_decay.ld) will contain pairwise SNP comparisons with their corresponding r2 values and the physical distance between the SNPs. This output can then be analyzed (using alternative non-R methods if required) to plot or further study LD decay patterns.",
+            "input_filename": [
+                "./data/1000GP_pruned.bed: SNP file in bed format",
+                "./data/1000GP_pruned.bim: snp info associate with the bed format",
+                "./data/1000GP_pruned.fam: data information, the first col is population, the second is sample ID"
+            ],
+            "output_filename": [
+                "./output/001/ld_decay.ld: output file containing pairwise LD (r2) values and SNP distances for LD decay analysis"
+            ],
+            "tools": "PLINK"
+        }
+    ]
+}
