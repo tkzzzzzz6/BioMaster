@@ -31,9 +31,19 @@ cd BioMaster
 
 2. Install the required dependencies:
 ```sh
+conda create -n agent python=3.12
+
+conda activate agent
+
 pip install -r requirements.txt
 ```
 
+3. download data and move to `data/`:
+
+```sh
+通过网盘分享的文件：Biomaster
+链接: https://pan.baidu.com/s/1t9I63lucrjdWjSK09NVxwQ?pwd=ai4s 提取码: ai4s 
+```
 ---
 
 ## Usage
@@ -42,34 +52,39 @@ BioMaster allows you to run and automate bioinformatics tasks using the `Biomast
 
 ```python
 from agents.Biomaster import Biomaster
+from langchain_core.messages import HumanMessage
+import json
+# Example of using the agent
+if __name__ == "__main__":
 
-# Configuration for the agent
-api_key = 'your-openai-api-key'
-base_url = 'your-openai-base-url'
+    config = {"configurable": {"thread_id": "abc124"}}
+    api_key = 'sk-BMBEq7cFiq8LClul845cB42f9aCf429dB04a0bF6Ad542e2b'
+    base_url = 'https://one-api.bltcy.top/v1'
+    manager = Biomaster(api_key, base_url,excutor=True, tools_dir="tools",id='002')
+    
+    datalist=["./data/1000GP_pruned.bed: SNP file in bed format",
+                "./data/1000GP_pruned.bim: snp info associate with the bed format",
+                "./data/1000GP_pruned.fam: data information, the first col is population, the second is sample ID",]
+    goal='please help me do ROH.'
+    
+    manager.execute_PLAN(goal,datalist)
+    print("**********************************************************")
 
-# Initialize Biomaster with your configuration
-manager = Biomaster(api_key, base_url, excutor=True, tools_dir="tools", id='002')
+    PLAN_results_dict = manager.execute_TASK(datalist)
+    print(PLAN_results_dict)
 
-# Input data and goal
-datalist = [
-    './data/4DNFI15H1RVG.fastq.gz: pair 1 The first file.',
-    './data/4DNFIZHUKESO.fastq.gz: pair 1 The second file.',
-    './data/4DNFIEQ58J6G.fastq.gz: pair 2 The first file.',
-    './data/4DNFIKVDGNJN.fastq.gz: pair 2 The second file.',
-    './data/hg38.bwaindex.tgz: GRCh38 (human) reference genome',
-    './data/hg38.chrom.sizes: GRCh38 chromsize file'
-]
 
-goal = 'Please use this data for a complete Hi-C data preprocessing process'
 
-# Run the task
-plan_results = manager.execute_TASK(datalist)
-print(plan_results)
 
 ```
 
 In this example, `Biomaster` is initialized with API keys and a set of data. The `execute_TASK` method processes the task with the provided data list and returns the plan results.
 
+
+```sh
+conda activate agent
+python run.py
+```
 ---
 
 ## File Structure
