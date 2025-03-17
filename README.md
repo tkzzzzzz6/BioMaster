@@ -97,17 +97,6 @@ python run.py
 
 ---
 
-## Contributing
-
-Feel free to fork the repository and create pull requests for any enhancements or bug fixes. Contributions are welcome!
-
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-branch`).
-3. Commit your changes (`git commit -m 'Add new feature'`).
-4. Push to your branch (`git push origin feature-branch`).
-5. Open a pull request.
-
----
 
 # License
 This project is licensed under the following terms:
