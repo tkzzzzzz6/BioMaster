@@ -1,4 +1,5 @@
 import os
+import json
 
 def normalize_keys(input_dict):
     """ Recursively convert all dictionary keys to lowercase."""
@@ -10,10 +11,16 @@ def normalize_keys(input_dict):
         return input_dict
 
 def load_tool_links(tool_name, tools_dir):
-    """加载工具链接并返回一个链接列表"""
-    tool_file_path = os.path.join(tools_dir, f"{tool_name}.txt")
-    if os.path.exists(tool_file_path):
-        with open(tool_file_path, "r", encoding="utf-8") as file:
-            tool_links = [line.strip() for line in file if line.strip()]
-        return tool_links
+    """读取Task_Knowledge.json并返回metadata下source的列表"""
+    json_file_path = os.path.join(tools_dir, "Task_Knowledge.json")
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+        
+        sources = []
+        for item in data:
+            if "metadata" in item and "source" in item["metadata"]:
+                sources.append(item["metadata"]["source"])
+        
+        return sources
     return []
