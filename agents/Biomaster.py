@@ -429,6 +429,73 @@ class Biomaster:
             Json_Error = False
 
             while retry_count < self.repeat:
+                # 如果DEBUG_output_dict存在且stats为false，直接执行脚本
+                if DEBUG_output_dict and DEBUG_output_dict.get("stats") is False:
+                    TASK_results = DEBUG_output_dict.get("shell", "")
+                    shell_script_path = self.shell_writing(TASK_results, i)
+                    
+                    self.check_stop()
+                    if self.stop_flag:
+                        break
+                        
+                    result = subprocess.run(["bash", shell_script_path], capture_output=True)
+                    
+                    stdout_str = result.stdout.decode("utf-8", errors="replace")
+                    stderr_str = result.stderr.decode("utf-8", errors="replace")
+                    
+                    self.check_stop()
+                    if self.stop_flag:
+                        break
+                        
+                    max_output_length = 5000
+                    result_stdout = stdout_str[:max_output_length] if len(stdout_str) > max_output_length else stdout_str
+                    result_stderr = stderr_str[:max_output_length] if len(stderr_str) > max_output_length else stderr_str
+                    
+                    DEBUG_input = {
+                        "input": json.dumps({
+                            "task": step,
+                            "pre debug": PRE_DEBUG_output if 'PRE_DEBUG_output' in locals() else [],
+                            "result": result_stderr if result.returncode != 0 else result_stdout,
+                            "related_docs": related_docs_content,
+                            "id": ids,
+                            "shell": TASK_results,
+                        })
+                    }
+                    
+                    self.save_progress(DEBUG_input, self.output_dir, f"DEBUG_Input_{i}.json")
+                    DEBUG_output = DEBUG_agent.invoke(DEBUG_input)
+                    
+                    # 初始化PRE_DEBUG_output如果不存在
+                    if 'PRE_DEBUG_output' not in locals():
+                        PRE_DEBUG_output = []
+                    
+                    # 保存上次输入
+                    PRE_DEBUG_output.append(DEBUG_output)
+                    
+                    # 继续正常处理DEBUG输出
+                    DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url)
+                    
+                    try:
+                        print("***************************************************************")
+                        print(DEBUG_output)
+                        print("***************************************************************")
+                        DEBUG_output_dict = json.loads(DEBUG_output)
+                        self.save_progress(DEBUG_output_dict, self.output_dir, f"DEBUG_Output_{i}.json")
+                        
+                        # 根据新的DEBUG输出决定是否继续
+                        if DEBUG_output_dict.get("stats", False):
+                            break  # 成功，跳出重试循环
+                        else:
+                            print(f"Step {i} failed: {DEBUG_output_dict.get('analyze', 'Unknown reason')}. Attempt {retry_count + 1}")
+                            retry_count += 1
+                            continue  # 继续下一次重试
+                    except json.JSONDecodeError:
+                        print(f"JSON Decode Error, retrying... Attempt {retry_count + 1}")
+                        DEBUG_output_dict = {}
+                        retry_count += 1
+                        Json_Error = True
+                        continue
+
                 if retry_count == 0 or Json_Error:
 
                     self.check_stop()
