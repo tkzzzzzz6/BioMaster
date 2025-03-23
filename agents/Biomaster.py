@@ -29,7 +29,7 @@ class Biomaster:
         self,
         api_key: str,
         base_url: str,
-        Model: str = "o3-mini-2025-01-31",
+        Model: str = "o1-2024-12-17",
         excutor: bool = False,
         Repeat: int = 5,
         output_dir: str = './output',
