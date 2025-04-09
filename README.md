@@ -285,7 +285,7 @@ Biomaster stores all output files in the `./output/` directory.
 
 2. If you want to **roll back previous steps (Step 1–N)**:
    - Either set `"stats": false` in the corresponding `DEBUG_Output` file:
-     ```json
+     ```
      ./output/{id}_DEBUG_Output_{step_number}.json
      ```
    - Or simply delete the `DEBUG_Output` file to re-trigger execution.
