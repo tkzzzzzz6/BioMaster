@@ -8,28 +8,28 @@ from langchain_core.prompts import ChatPromptTemplate
 
 class CheckAgent:
     """
-    CheckAgent，核心功能:
-    - 验证预期输出文件是否存在且非空（0字节）
-    - 文件不存在时扫描目录并让大模型判断可能的输出文件
-    - 更新DEBUG_Output文件中的状态
+    CheckAgent, core functions:
+    - Verify expected output files exist and are non-empty (0 bytes)
+    - Scan directory and use LLM to identify possible output files when expected files don't exist
+    - Update status in DEBUG_Output file
     """
     
     def __init__(self, api_key: str, base_url: str, model: str = "o1-2024-12-17", **kwargs):
-        # 设置日志记录
+        # Set up logging
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
         self.model = ChatOpenAI(model=model, base_url=base_url)
         
-        # 创建提示模板 - 修复了JSON格式的转义问题
+        # Create prompt template
         self.file_prompt = ChatPromptTemplate.from_messages([
             ("system", """
-            You are a bioinformatics file analyzer. Based on the step information and file list, 
-            determine which files are likely outputs. Return JSON with:
-            {{
+            You are a bioinformatics file analysis expert. Based on the step information and file list,
+            determine which files are likely valid outputs. Return JSON with:
+            {
                 "analysis": "Detailed analysis of why files are valid or invalid",
                 "output_filename": ["file1: description", "file2: description", ...],
-                "stats": true/false (whether the files are valid outputs)
-            }}
+                "stats": true/false (whether files are valid outputs)
+            }
             """),
             ("human", """
             Step details:
@@ -44,7 +44,7 @@ class CheckAgent:
         ])
     
     def check_file_size(self, file_path: str) -> Tuple[bool, str]:
-        """检查文件是否存在且非空（0字节）"""
+        """Check if file exists and is not empty (0 bytes)"""
         if not os.path.exists(file_path):
             return False, f"File doesn't exist: {file_path}"
         
@@ -54,7 +54,7 @@ class CheckAgent:
         return True, f"File exists and has content"
     
     def scan_directory(self, directory: str) -> List[Dict[str, Any]]:
-        """扫描目录中的所有非空文件"""
+        """Scan all non-empty files in the directory"""
         if not os.path.exists(directory):
             return []
         
@@ -70,93 +70,60 @@ class CheckAgent:
         return files
     
     def get_step_details(self, task_id: str, step_number: str) -> Dict[str, Any]:
-        """从PLAN.json获取步骤详情"""
+        """Get step details from PLAN.json"""
         plan_path = f"./output/{task_id}_PLAN.json"
         if not os.path.exists(plan_path):
             return {}
         
-        plan_file = open(plan_path, 'r', encoding='utf-8')
-        plan_data = plan_file.read()
-        plan_file.close()
-        
-        if not plan_data:
+        try:
+            with open(plan_path, 'r', encoding='utf-8') as plan_file:
+                plan = json.load(plan_file)
+                
+            for step in plan.get("plan", []):
+                if str(step.get("step_number", "")) == step_number:
+                    return step
+        except:
             return {}
-            
-        plan = json.loads(plan_data)
-        
-        for step in plan.get("plan", []):
-            if str(step.get("step_number", "")) == step_number:
-                return step
         
         return {}
     
-    def is_valid_json(self, json_str: str) -> bool:
-        """检查字符串是否为有效的JSON"""
-        if not json_str:
-            return False
-            
-        # 简单检查是否以{ 开头，以 }结尾
-        json_str = json_str.strip()
-        if not (json_str.startswith('{') and json_str.endswith('}')):
-            return False
-            
-        # 更多的检查可以添加在这里
-        return True
-    
-    def safe_parse_json(self, json_str: str) -> Dict[str, Any]:
-        """安全解析JSON字符串，避免使用try-except"""
-        if not self.is_valid_json(json_str):
-            self.logger.error(f"Invalid JSON format: {json_str[:100]}...")
-            # Return an empty dict with just the error message to append to existing analysis
+    def check_output_files(self, debug_output_path: str) -> Dict[str, Any]:
+        """
+        Main check function: Check if files exist and are non-empty, scan directory for analysis if not
+        Returns a dictionary with analysis and stats
+        """
+        # Check and load DEBUG_Output file
+        if not os.path.exists(debug_output_path):
             return {
-                "analysis": "Note: Response format was invalid but processing continues.",
-                "output_filename": [],
-                "stats": True  # Changed from False to True to not fail due to format issues
+                "analysis": "DEBUG_Output file doesn't exist",
+                "stats": False
             }
             
         try:
-            return json.loads(json_str)
-        except json.JSONDecodeError:
-            self.logger.error(f"JSON decode error: {json_str[:100]}...")
+            with open(debug_output_path, 'r', encoding='utf-8') as debug_file:
+                debug_output = json.load(debug_file)
+        except:
             return {
-                "analysis": "Note: JSON parsing error occurred but processing continues.",
-                "output_filename": [],
-                "stats": True
+                "analysis": "Failed to read DEBUG_Output file",
+                "stats": False
             }
-    
-    def check_output_files(self, debug_output_path: str) -> Dict[str, Any]:
-        """
-        主要检查函数：检查文件是否存在且非空，不存在则扫描目录分析
-        """
-        # 检查并加载DEBUG_Output文件
-        if not os.path.exists(debug_output_path):
-            self.logger.error(f"DEBUG_Output file not found: {debug_output_path}")
-            return {"overall_check": False}
-            
-        debug_file = open(debug_output_path, 'r', encoding='utf-8')
-        debug_content = debug_file.read()
-        debug_file.close()
         
-        if not debug_content:
-            self.logger.error(f"DEBUG_Output file is empty")
-            return {"overall_check": False}
-            
-        debug_output = json.loads(debug_content)
+        # Keep original stats value
+        original_stats = debug_output.get("stats", True)
         
-        # 如果stats已经是False，直接返回
-        if not debug_output.get("stats", False):
-            return {"overall_check": False}
-        
-        # 从路径提取任务ID和步骤号
+        # Extract task ID and step number from path
         path_match = re.search(r'(\d+)_DEBUG_Output_(\d+)\.json', debug_output_path)
         if not path_match:
-            return {"overall_check": False}
+            return {
+                "analysis": "Failed to extract task ID and step number from path",
+                "stats": False
+            }
         
         task_id = path_match.group(1)
         step_number = path_match.group(2)
         output_dir = f"./output/{task_id}"
         
-        # 获取期望的输出文件列表
+        # Get expected output file list
         output_files = debug_output.get("output_filename", [])
         expected_files = []
         for file_entry in output_files:
@@ -166,70 +133,85 @@ class CheckAgent:
                 path = file_entry.strip()
             expected_files.append(path)
         
-        # 检查所有预期文件
-        all_valid = True
-        
-        # 如果有预期文件，检查它们是否存在且非空
+        # 1. Check if all expected files exist and are non-empty
         if expected_files:
+            all_valid = True
+            has_empty_file = False
+            failed_files = []
+            
             for file_path in expected_files:
-                valid, _ = self.check_file_size(file_path)
+                valid, message = self.check_file_size(file_path)
                 if not valid:
                     all_valid = False
-                    break
+                    failed_files.append(message)
+                    if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+                        has_empty_file = True
             
-            # 如果所有文件都有效，直接返回成功
-            if all_valid:
+            if has_empty_file:
                 return {
-                    "overall_check": True,
+                    "analysis": "there's an empty file",
+                    "stats": False
+                }
+            
+            # If all expected files are valid, return success without changing stats
+            if all_valid:
+                with open(debug_output_path, 'w', encoding='utf-8') as out_file:
+                    json.dump(debug_output, out_file, indent=4)
+                return {
+                    "analysis": "All expected files exist and are non-empty",
                     "stats": True
                 }
-        
-        # 扫描目录中的所有非空文件
+                    
+        # 2. If no expected files or missing expected files, scan directory
         all_files = self.scan_directory(output_dir)
         if not all_files:
-            # 没有找到任何文件，直接标记失败
-            debug_output["stats"] = False
-            debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\nNo valid files found in {output_dir}"
+            # No files found, but don't change stats
+            analysis_message = f"No files found in {output_dir}"
+            debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\n{analysis_message}"
             
-            out_file = open(debug_output_path, 'w', encoding='utf-8')
-            out_file.write(json.dumps(debug_output, indent=4))
-            out_file.close()
+            with open(debug_output_path, 'w', encoding='utf-8') as out_file:
+                json.dump(debug_output, out_file, indent=4)
             
-            return {"overall_check": False, "stats": False}
+            return {
+                "analysis": analysis_message,
+                "stats": False
+            }
         
-        # 获取步骤详情并格式化文件列表
+        # 3. Get step details and format file list
         step_details = self.get_step_details(task_id, step_number)
         file_list_text = "\n".join([f"- {f['path']} ({f['size']} bytes)" for f in all_files])
         
-        # 调用大模型分析
+        # 4. Call LLM for analysis
         response = self.file_prompt.invoke({
             "step_number": step_details.get("step_number", "unknown"),
             "tool_name": step_details.get("tools", "unknown"),
             "step_description": step_details.get("description", "unknown"),
             "file_list": file_list_text,
-            "expected_files": ", ".join(expected_files) if expected_files else "None specified"
+            "expected_files": ", ".join(expected_files) if expected_files else "not specified"
         })
         
         result = self.model.invoke(response)
         
-        # 解析模型回复，避免使用try-except
-        model_response = self.safe_parse_json(result.content)
-        analysis = model_response.get("analysis", "")
-        new_output_files = model_response.get("output_filename", [])
-        stats = model_response.get("stats", True)  # Default to True instead of False
-        print("--------------------------------")
-        print(model_response)
-        print("--------------------------------")
+        # 5. Parse model response
+        try:
+            model_response = json.loads(result.content)
+            analysis = model_response.get("analysis", "")
+            new_output_files = model_response.get("output_filename", [])
+            model_stats = model_response.get("stats", True)  # Default to True
+        except:
+            analysis = "Failed to parse LLM response, but continuing processing"
+            new_output_files = []
+            model_stats = True
         
-        # 如果结果为True，更新PLAN.json文件中的output_filename和下一步的input_filename
-        if stats and new_output_files:
+        # 6. Update PLAN.json if new output files found
+        if model_stats and new_output_files:
             plan_path = f"./output/{task_id}_PLAN.json"
             if os.path.exists(plan_path):
                 try:
                     with open(plan_path, 'r', encoding='utf-8') as plan_file:
                         plan_data = json.load(plan_file)
                     
-                    # 找到当前步骤和下一步
+                    # Find current step and next step
                     current_step = None
                     next_step = None
                     steps = plan_data.get("plan", [])
@@ -241,74 +223,49 @@ class CheckAgent:
                                 next_step = steps[i + 1]
                             break
                     
-                    # 更新当前步骤的output_filename
+                    # Update current step's output_filename
                     if current_step:
-                        # 为每个新文件添加备注
-                        annotated_files = []
-                        for file_path in new_output_files:
-                            if ": " not in file_path:
-                                annotated_files.append(f"{file_path}: Possible correct output file")
-                            else:
-                                annotated_files.append(file_path)
-                        
-                        # 更新当前步骤的output_filename
                         current_outputs = current_step.get("output_filename", [])
-                        # 去除重复项
-                        updated_outputs = []
                         existing_paths = [f.split(": ")[0] if ": " in f else f for f in current_outputs]
                         
-                        for file in current_outputs:
-                            updated_outputs.append(file)
-                            
-                        for file in annotated_files:
+                        for file in new_output_files:
                             file_path = file.split(": ")[0] if ": " in file else file
                             if file_path not in existing_paths:
-                                updated_outputs.append(file)
+                                current_outputs.append(file)
                                 existing_paths.append(file_path)
                         
-                        current_step["output_filename"] = updated_outputs
+                        current_step["output_filename"] = current_outputs
                     
-                    # 更新下一步的input_filename
+                    # Update next step's input_filename
                     if next_step:
-                        # 添加当前步骤的output作为下一步的input
                         next_inputs = next_step.get("input_filename", [])
-                        # 去除重复项
-                        updated_inputs = []
                         existing_paths = [f.split(": ")[0] if ": " in f else f for f in next_inputs]
                         
-                        for file in next_inputs:
-                            updated_inputs.append(file)
-                            
-                        for file in annotated_files:
+                        for file in new_output_files:
                             file_path = file.split(": ")[0] if ": " in file else file
                             if file_path not in existing_paths:
-                                updated_inputs.append(file)
+                                next_inputs.append(file)
                                 existing_paths.append(file_path)
                         
-                        next_step["input_filename"] = updated_inputs
+                        next_step["input_filename"] = next_inputs
                     
-                    # 保存更新后的PLAN.json
+                    # Save updated PLAN.json
                     with open(plan_path, 'w', encoding='utf-8') as plan_file:
                         json.dump(plan_data, plan_file, indent=4)
-                    
-                    self.logger.info(f"Updated PLAN.json with identified output files")
-                    
                 except Exception as e:
-                    self.logger.error(f"Error updating PLAN.json: {str(e)}")
+                    analysis += f"\nError updating PLAN.json: {str(e)}"
         
-        # 更新DEBUG_Output文件
-        debug_output["stats"] = debug_output.get("stats", True) and stats  # Preserve existing stats unless new one is False
+        # 7. Update DEBUG_Output file
+        # Maintain original stats unless file exists but is empty
         debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\n{analysis}"
         if new_output_files:
             debug_output["output_filename"] = new_output_files
         
-        out_file = open(debug_output_path, 'w', encoding='utf-8')
-        out_file.write(json.dumps(debug_output, indent=4))
-        out_file.close()
+        with open(debug_output_path, 'w', encoding='utf-8') as out_file:
+            json.dump(debug_output, out_file, indent=4)
         
         return {
-            "overall_check": stats,
             "analysis": analysis,
             "output_filename": new_output_files,
-            "stats": stats
+            "stats": model_stats and debug_output.get("stats", True)  # Return combined status
         }

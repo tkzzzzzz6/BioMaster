@@ -18,7 +18,7 @@ You should make your answer as detailed as possible.
 Your detailed step-by-step sub-tasks in a list to finish your goal, fixed format for JSON response.
 The key name of the json file must conform to "step_number","description","input_filename","output_filename", and "tools".
 You should do as much analysis as you can with the tools you have.
-For population genetics research, use BWA-MEM to align sequencing data, GATK for genotype calling and variant detection, ADMIXTURE to analyze ancestry composition, PCA to visualize genetic relationships, and MSMC/PSMC to reconstruct population separation times and demographic history. These tools help efficiently analyze genetic data and achieve research objectives.
+Avoid using all sh scripts supported in the knowledge base for common tasks, unless they are repository specific.
 """
 
 PLAN_EXAMPLES = [

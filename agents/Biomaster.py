@@ -457,78 +457,14 @@ class Biomaster:
 
             while retry_count < self.repeat:
                 # 如果DEBUG_output_dict存在且stats为false，直接执行脚本
-                if DEBUG_output_dict and DEBUG_output_dict.get("stats") is False:
-                    TASK_results = DEBUG_output_dict.get("shell", "")
-                    shell_script_path = self.shell_writing(TASK_results, i)
-                    
+                if DEBUG_output_dict and DEBUG_output_dict.get("stats") is False and retry_count==0:
+                    TASK_results = DEBUG_output_dict.get("shell", "")  
+                    PRE_DEBUG_output=[]      
+                elif retry_count == 0 or Json_Error:
                     self.check_stop()
                     if self.stop_flag:
                         break
-                        
-                    result = subprocess.run(["bash", shell_script_path], capture_output=True)
-                    
-                    stdout_str = result.stdout.decode("utf-8", errors="replace")
-                    stderr_str = result.stderr.decode("utf-8", errors="replace")
-                    
-                    self.check_stop()
-                    if self.stop_flag:
-                        break
-                        
-                    max_output_length = 5000
-                    result_stdout = stdout_str[:max_output_length] if len(stdout_str) > max_output_length else stdout_str
-                    result_stderr = stderr_str[:max_output_length] if len(stderr_str) > max_output_length else stderr_str
-                    
-                    DEBUG_input = {
-                        "input": json.dumps({
-                            "task": step,
-                            "pre debug": PRE_DEBUG_output if 'PRE_DEBUG_output' in locals() else [],
-                            "result": result_stderr if result.returncode != 0 else result_stdout,
-                            "related_docs": related_docs_content,
-                            "id": ids,
-                            "shell": TASK_results,
-                        })
-                    }
-                    
-                    self.save_progress(DEBUG_input, self.output_dir, f"DEBUG_Input_{i}.json")
-                    DEBUG_output = DEBUG_agent.invoke(DEBUG_input)
-                    
-                    # 初始化PRE_DEBUG_output如果不存在
-                    if 'PRE_DEBUG_output' not in locals():
-                        PRE_DEBUG_output = []
-                    
-                    # 保存上次输入
-                    PRE_DEBUG_output.append(DEBUG_output)
-                    
-                    # 继续正常处理DEBUG输出
-                    DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url)
-                    
-                    try:
-                        print("***************************************************************")
-                        print(DEBUG_output)
-                        print("***************************************************************")
-                        DEBUG_output_dict = json.loads(DEBUG_output)
-                        self.save_progress(DEBUG_output_dict, self.output_dir, f"DEBUG_Output_{i}.json")
-                        
-                        # 根据新的DEBUG输出决定是否继续
-                        if DEBUG_output_dict.get("stats", False):
-                            break  # 成功，跳出重试循环
-                        else:
-                            print(f"Step {i} failed: {DEBUG_output_dict.get('analyze', 'Unknown reason')}. Attempt {retry_count + 1}")
-                            retry_count += 1
-                            continue  # 继续下一次重试
-                    except json.JSONDecodeError:
-                        print(f"JSON Decode Error, retrying... Attempt {retry_count + 1}")
-                        DEBUG_output_dict = {}
-                        retry_count += 1
-                        Json_Error = True
-                        continue
-
-                if retry_count == 0 or Json_Error:
-
-                    self.check_stop()
-                    if self.stop_flag:
-                        break
-                    # 从 datalist 中提取文件路径
+                    # extract data from datalist
                     # 假设 step['input_filename'] 已经存在并是一个列表
                     new_input_filenames = [item.split(':')[0] for item in step_datalist]
                     # 更新 step['input_filename']，确保没有重复文件路径
@@ -614,23 +550,31 @@ class Biomaster:
                     # Only perform checks if stats is True
                     if DEBUG_output_dict.get("stats", False):
                         # Add file verification using CheckAgent
-
                         debug_output_path = os.path.join(self.output_dir, f"{self.id}_DEBUG_Output_{i}.json")
                         check_results = self.check_agent.check_output_files(debug_output_path)
                         
-                        # If CheckAgent modified the DEBUG output (i.e., found issues)
+                        # Reload the DEBUG output file as CheckAgent may have updated it
+                        with open(debug_output_path, 'r', encoding='utf-8') as f:
+                            DEBUG_output_dict = json.load(f)
                         
-                        if check_results.get("debug_output_modified", False):
-                            # Reload the updated DEBUG output
-                            with open(debug_output_path, 'r', encoding='utf-8') as f:
-                                DEBUG_output_dict = json.load(f)
+                        # If file verification passed
+                        if check_results.get("stats", True):
+                            # If we have new output filenames, update them
+                            if check_results.get("output_filename"):
+                                # Update the output_filename in DEBUG_output_dict
+                                DEBUG_output_dict["output_filename"] = check_results.get("output_filename")
+                                self.save_progress(DEBUG_output_dict, self.output_dir, f"DEBUG_Output_{i}.json")
                             
-                            # Give DebugAgent another chance if files failed verification
+                            # Success - move to next step
+                            previous_output_filenames = step['output_filename']
+                            break
+                        else:
+                            # File verification failed, give DebugAgent another chance
                             DEBUG_input = {
                                 "input": json.dumps({
                                     "task": step,
                                     "pre debug": [json.dumps(DEBUG_output_dict)],
-                                    "result": f"File verification failed. {DEBUG_output_dict.get('analyze', '')}",
+                                    "result": f"File verification failed: {check_results.get('analysis', '')}"+result_stderr,
                                     "related_docs": related_docs_content,
                                     "id": ids,
                                     "shell": TASK_results,
@@ -643,19 +587,21 @@ class Biomaster:
                             
                             try:
                                 new_DEBUG_output_dict = json.loads(DEBUG_output)
-                                # Directly update the original DEBUG output file
+                                # Update the DEBUG output file
                                 DEBUG_output_dict = new_DEBUG_output_dict
                                 self.save_progress(DEBUG_output_dict, self.output_dir, f"DEBUG_Output_{i}.json")
                             except json.JSONDecodeError:
                                 logging.error(f"Error parsing DEBUG agent retry output for step {i}")
-                        
-                        # Continue only if final stats is True
-                        if DEBUG_output_dict.get("stats", False):
-                            previous_output_filenames = step['output_filename']
-                            break  # Success
-                        else:
-                            print(f"Step {i} failed: {DEBUG_output_dict.get('analyze', 'Unknown reason')}. Attempt {retry_count + 1}")
-                            retry_count += 1
+                            
+                            # Check if DebugAgent fixed the issue
+                            if DEBUG_output_dict.get("stats", False):
+                                previous_output_filenames = step['output_filename']
+                                break  # Success
+                            else:
+                                print(f"Step {i} failed: {DEBUG_output_dict.get('analyze', '')}")
+                                print(f"File check analysis: {check_results.get('analysis', '')}")
+                                print(f"Attempt {retry_count + 1}")
+                                retry_count += 1
                     else:
                         print(f"Step {i} failed. Attempt {retry_count + 1}")
                         retry_count += 1
