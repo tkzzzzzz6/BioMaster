@@ -29,12 +29,13 @@ class Biomaster:
         self,
         api_key: str,
         base_url: str,
-        Model: str = "o1-2024-12-17",
+        Model: str = "o3-mini",
         excutor: bool = False,
         Repeat: int = 5,
         output_dir: str = './output',
         id: str = '001',
-        chroma_db_dir: str = './chroma_db'  # Chroma持久化目录
+        chroma_db_dir: str = './chroma_db',  # Chroma持久化目录
+        token_log_path: str = './token.txt'  # 添加 token 日志路径参数
     ):
         # 设置 USER_AGENT 环境变量以消除警告
         os.environ['USER_AGENT'] = 'Biomaster/1.0'
@@ -47,6 +48,7 @@ class Biomaster:
         self.repeat = Repeat
         self.output_dir = output_dir
         self.stop_flag = False  # 标志位
+        self.token_log_path = token_log_path
 
         if id == '000':
             self.id = self._generate_new_id()
@@ -227,6 +229,26 @@ class Biomaster:
         logging.info("Loaded Tool_RAG data.")
         # Chroma 会自动持久化，无需显式调用 persist()
 
+    def log_token_usage(self, model_name, input_tokens, output_tokens):
+        """
+        记录模型token使用情况到日志文件
+        
+        :param model_name: 使用的模型名称
+        :param input_tokens: 输入token数量
+        :param output_tokens: 输出token数量
+        """
+        log_entry = f"Model: {model_name}, Input tokens: {input_tokens}, Output tokens: {output_tokens}\n"
+        
+        # 确保日志目录存在
+        os.makedirs(os.path.dirname(os.path.abspath(self.token_log_path)), exist_ok=True)
+        
+        # 将日志追加到文件
+        with open(self.token_log_path, "a", encoding="utf-8") as log_file:
+            log_file.write(log_entry)
+        
+        # 同时输出到控制台
+        logging.info(f"Token usage: {log_entry.strip()}")
+
     def _create_agent(self, prompt_template, examples):
         model = ChatOpenAI(model=self.model, base_url=self.base_url)
 
@@ -339,7 +361,12 @@ class Biomaster:
         }
         PLAN_results = self.PLAN_agent.invoke(PLAN_input)
         print(PLAN_results)
-        PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url)
+        
+        # 使用修改后的Json_Format_Agent函数获取token使用情况
+        PLAN_results, format_input_tokens, format_output_tokens = Json_Format_Agent(
+            PLAN_results, self.api_key, self.base_url, return_tokens=True
+        )
+        self.log_token_usage(self.model, format_input_tokens, format_output_tokens)
         
         try:
             PLAN_results_dict = self.normalize_keys(json.loads(PLAN_results.strip().strip('"')))
@@ -516,7 +543,11 @@ class Biomaster:
                         })
                     }
                     TASK_results = TASK_agent.invoke(TASK_input)
-                    TASK_results = Json_Format_Agent(TASK_results, self.api_key, self.base_url)
+                    TASK_results, task_input_tokens, task_output_tokens = Json_Format_Agent(
+                        TASK_results, self.api_key, self.base_url, return_tokens=True
+                    )
+                    if task_input_tokens and task_output_tokens:
+                        self.log_token_usage(self.model, task_input_tokens, task_output_tokens)
                     PRE_DEBUG_output = []
                     try:
                         TASK_results = json.loads(TASK_results)

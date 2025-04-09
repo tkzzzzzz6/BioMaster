@@ -220,6 +220,82 @@ class CheckAgent:
         print("--------------------------------")
         print(model_response)
         print("--------------------------------")
+        
+        # 如果结果为True，更新PLAN.json文件中的output_filename和下一步的input_filename
+        if stats and new_output_files:
+            plan_path = f"./output/{task_id}_PLAN.json"
+            if os.path.exists(plan_path):
+                try:
+                    with open(plan_path, 'r', encoding='utf-8') as plan_file:
+                        plan_data = json.load(plan_file)
+                    
+                    # 找到当前步骤和下一步
+                    current_step = None
+                    next_step = None
+                    steps = plan_data.get("plan", [])
+                    
+                    for i, step in enumerate(steps):
+                        if str(step.get("step_number", "")) == step_number:
+                            current_step = step
+                            if i + 1 < len(steps):
+                                next_step = steps[i + 1]
+                            break
+                    
+                    # 更新当前步骤的output_filename
+                    if current_step:
+                        # 为每个新文件添加备注
+                        annotated_files = []
+                        for file_path in new_output_files:
+                            if ": " not in file_path:
+                                annotated_files.append(f"{file_path}: Possible correct output file")
+                            else:
+                                annotated_files.append(file_path)
+                        
+                        # 更新当前步骤的output_filename
+                        current_outputs = current_step.get("output_filename", [])
+                        # 去除重复项
+                        updated_outputs = []
+                        existing_paths = [f.split(": ")[0] if ": " in f else f for f in current_outputs]
+                        
+                        for file in current_outputs:
+                            updated_outputs.append(file)
+                            
+                        for file in annotated_files:
+                            file_path = file.split(": ")[0] if ": " in file else file
+                            if file_path not in existing_paths:
+                                updated_outputs.append(file)
+                                existing_paths.append(file_path)
+                        
+                        current_step["output_filename"] = updated_outputs
+                    
+                    # 更新下一步的input_filename
+                    if next_step:
+                        # 添加当前步骤的output作为下一步的input
+                        next_inputs = next_step.get("input_filename", [])
+                        # 去除重复项
+                        updated_inputs = []
+                        existing_paths = [f.split(": ")[0] if ": " in f else f for f in next_inputs]
+                        
+                        for file in next_inputs:
+                            updated_inputs.append(file)
+                            
+                        for file in annotated_files:
+                            file_path = file.split(": ")[0] if ": " in file else file
+                            if file_path not in existing_paths:
+                                updated_inputs.append(file)
+                                existing_paths.append(file_path)
+                        
+                        next_step["input_filename"] = updated_inputs
+                    
+                    # 保存更新后的PLAN.json
+                    with open(plan_path, 'w', encoding='utf-8') as plan_file:
+                        json.dump(plan_data, plan_file, indent=4)
+                    
+                    self.logger.info(f"Updated PLAN.json with identified output files")
+                    
+                except Exception as e:
+                    self.logger.error(f"Error updating PLAN.json: {str(e)}")
+        
         # 更新DEBUG_Output文件
         debug_output["stats"] = debug_output.get("stats", True) and stats  # Preserve existing stats unless new one is False
         debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\n{analysis}"
