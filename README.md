@@ -1,28 +1,112 @@
-# BioMaster: Automating Complex Bioinformatics Workflows
+# 🧬 BioMaster: Multi-agent System for Automated Bioinformatics Analysis Workflow
 
-**BioMaster** is a multi-agent framework designed to streamline and automate complex bioinformatics workflows. By leveraging large language models (LLMs) and dynamic knowledge retrieval, BioMaster addresses key limitations in automation, improving accuracy, efficiency, and scalability across a wide range of bioinformatics tasks, such as RNA-seq, ChIP-seq, and Hi-C data processing.
+[![BioRxiv](https://img.shields.io/badge/bioRxiv-10.1101%2F2025.01.23.634608-brightgreen.svg)](https://www.biorxiv.org/content/10.1101/2025.01.23.634608v1.abstract)
 
----
-
-## Features
-
-- **Automated Bioinformatics Workflows**: BioMaster automates complex bioinformatics tasks, such as data preprocessing, alignment, variant calling, and analysis, with a focus on RNA-seq, ChIP-seq, and Hi-C data.
-- **Role-based Agents**: Specialized agents within BioMaster perform task decomposition, validation, and execution, improving the management of complex workflows.
-- **Retrieval-Augmented Generation (RAG)**: BioMaster dynamically retrieves relevant knowledge from external sources to enhance adaptability to new tools and niche analyses.
-- **Enhanced Error Handling**: BioMaster provides advanced error detection and correction mechanisms to ensure consistency and reliability across multi-step workflows.
-- **Efficient Memory Management**: Optimized memory strategies allow BioMaster to handle long-running workflows without compromising performance or accuracy.
-- **Extensible**: BioMaster is designed to be easily extendable, with support for custom bioinformatics tools and workflows.
+**BioMaster** is a sophisticated, multi-agent framework that leverages large language models (LLMs) and dynamic knowledge retrieval to automate and streamline complex bioinformatics workflows. Designed specifically to tackle the challenges of modern bioinformatics, BioMaster improves accuracy, efficiency, reproducibility, and scalability across diverse omics data types, including RNA-seq, ChIP-seq, single-cell analysis, spatial transcriptomics, and Hi-C data processing.
 
 ---
 
-## Installation
+## 🚀 Key Features
+
+- **✨ Fully Automated Bioinformatics Pipelines**
+  - Seamlessly automates data preprocessing, alignment, variant calling, and comprehensive downstream analysis.
+
+- **🤖 Role-Based Multi-Agent System**
+  - Specialized agents (Plan, Task, Debug, and Check Agents) collaboratively handle task decomposition, execution, validation, and error recovery.
+
+- **📚 Dynamic Retrieval-Augmented Generation (RAG)**
+  - Dynamically retrieves and integrates domain-specific knowledge, allowing BioMaster to adapt rapidly to emerging bioinformatics tools and specialized workflows.
+
+- **🔍 Advanced Error Handling & Recovery**
+  - Robust error detection and automated debugging mechanisms minimize propagation of errors across workflow steps, ensuring reliability and reproducibility.
+
+- **🧠 Optimized Memory Management**
+  - Efficiently manages memory, enabling stable and consistent performance even in complex, long-running workflows.
+
+- **⚙️ Extensible & Customizable**
+  - Supports easy integration of custom bioinformatics tools, scripts, and workflows, empowering researchers to extend BioMaster according to their specific analysis needs.
+
+- **🖥️ Interactive UI**
+  - User-friendly graphical interface allows users without extensive computational expertise to effortlessly manage, execute, and monitor bioinformatics workflows.
+
+---
+## 📌 Supported Bioinformatics Workflows
+
+BioMaster autonomously handles a diverse range of bioinformatics analyses across multiple omics modalities:
+
+### 🧬 **RNA-seq Analysis**
+- DEG analysis (Differentially Expressed Genes)
+- DEG analysis (WGS-based)
+- Fusion gene detection
+- APA analysis (Alternative Polyadenylation)
+- RNA editing
+- Splicing analysis
+- Expression quantification
+- Novel transcript identification
+- Functional enrichment
+- Circular RNA identification
+
+### 🔬 **ChIP-seq Analysis**
+- Peak calling
+- Motif discovery
+- Functional enrichment
+
+### 🧫 **Single-cell RNA-seq (scRNA-seq)**
+- DEG analysis
+- Marker gene identification
+- Cell clustering
+- Top marker genes identification
+
+### 🗺️ **Spatial Transcriptomics**
+- Neighborhood enrichment
+- Cell type annotation
+- Spatially Variable Gene (SVG) detection
+- Clustering
+- Ligand-Receptor interactions
+
+### 🧩 **Hi-C Data Processing**
+- Mapping & sorting conversion
+- Pair parsing & cleaning
+- Contact matrix generation
+
+### 🧪 **Nanopore Sequencing**
+- DNA methylation identification
+- De novo assembly
+- Alignment
+- Quality control
+- Host removal
+- Transcript quantification analysis
+- Isoform quantification (RNA-seq)
+
+### 📌 **microRNA Analysis**
+- microRNA prediction
+- microRNA quantification
+
+### 📂 **Other Specialized Data Types**
+- DNA methylation (Bisulfite-Seq)
+- DNase-seq hypersensitive site identification
+- PAS (Polyadenylation Site) identification (3’end-seq)
+- Protein-RNA cross-links identification
+- Ribo-seq analysis (RBP-bound enriched genes)
+- Metagenomic analysis and composition plotting
+- TSS identification (CAGE-seq)
+- Protein expression quantification
+- Isoform quantification for PacBio RNA-seq
+- Translated ORFs identification (Ribo-seq)
+
+---
+
+
+## 📖 Installation
 
 You can install BioMaster using the following steps:
 
 1. Clone the repository:
 
+```sh
 git clone https://github.com/yourusername/BioMaster.git
 cd BioMaster
+```
 
 2. Install the required dependencies:
 
@@ -35,10 +119,12 @@ conda activate agent
 pip install -r requirements.txt
 ```
 
+
 3. download data and move to `data/`:
 
+google drive link: 
 ```sh
-google drive link: https://drive.google.com/drive/folders/1vA3WIAVXVo4RZSqXKsItEZHVaBgIIv_E?usp=sharing
+https://drive.google.com/drive/folders/1vA3WIAVXVo4RZSqXKsItEZHVaBgIIv_E?usp=sharing
 ```
 
 ---
@@ -302,10 +388,71 @@ Biomaster stores all output files in the `./output/` directory.
    python run.py
    ```
 
+### Use Biomaster in UI Mode
+
+#### 1. Start the UI
+
+Run the following command to launch the Biomaster UI:
+
+```bash
+conda activate agent
+python runv.py
+```
+
+#### 2. Open the UI in your browser
+
+Once started, open the following URL in your browser:
+
+```text
+http://127.0.0.1:7860/
+```
+
+The UI interface looks like this:
+
+![UI](./source/UI.png)
+
+---
+
+#### 3. Add Knowledge to PLAN RAG and EXECUTE RAG  
+Make sure your analysis workflows and tools are already added to the corresponding RAGs.
+
+---
+
+#### 4. Configure API Access  
+Set your **Base URL** and **API Key** in the designated fields in the UI.
+
+---
+
+#### 5. Define the Task  
+Provide the following inputs:
+- **Task ID**: A unique identifier for this task.
+- **Input Data Path**: Path to your data.
+- **Goal**: A description of the analysis you want Biomaster to perform.
+
+---
+
+#### 6. Generate the Plan  
+Click the **"Generate Plan"** button to allow Biomaster to generate a task execution plan.
+
+---
+
+#### 7. Execute the Plan  
+After the plan is ready, click the **"Execute Plan"** button to start the automated execution process.
+
+---
+
+#### 8. Stop the Task  
+If you need to interrupt execution, click the **"Stop PLAN"** button.
+
+---
+
+#### 9. Load and View Results  
+Click the **"Load and Show"** button to:
+- Load and review results of a previous task, or
+- Display outputs from the current task.
 
 
-
-## File Structure
+## 📚 File Structure
 
 - `agents/`: Contains agent classes for task management and execution.
 - `scripts/`: some example scripts.
@@ -314,8 +461,21 @@ Biomaster stores all output files in the `./output/` directory.
 - `data/`: Usually used to store files.
 
 ---
+##  📧 Citation
+if you use BioMaster in your work, please cite the following paper:
 
-# License
+```bibtex
+@article{su2025biomaster,
+  title={BioMaster: Multi-agent System for Automated Bioinformatics Analysis Workflow},
+  author={Su, Houcheng and Long, Weicai and Zhang, Yanlin},
+  journal={bioRxiv},
+  pages={2025--01},
+  year={2025},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
+
+## License
 
 This project is licensed under the following terms:
 
