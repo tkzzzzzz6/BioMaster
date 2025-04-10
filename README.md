@@ -99,7 +99,9 @@ BioMaster autonomously handles a diverse range of bioinformatics analyses across
 - Translated ORFs identification (Ribo-seq)
 
 ---
+## 📖 Documentation
 
+You can find the documentation in the [docs](https://biomaster.readthedocs.io/en/latest/) folder.
 
 ## 📖 Installation
 
