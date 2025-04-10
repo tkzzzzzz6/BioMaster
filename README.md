@@ -1,3 +1,7 @@
+<div  align="center">    
+ <img src="./source/Biomaster.svg" width = "100" height = "100" alt="BioMaster" align=center />
+</div>
+
 # 🧬 BioMaster: Multi-agent System for Automated Bioinformatics Analysis Workflow
 
 [![BioRxiv](https://img.shields.io/badge/bioRxiv-10.1101%2F2025.01.23.634608-brightgreen.svg)](https://www.biorxiv.org/content/10.1101/2025.01.23.634608v1.abstract)
