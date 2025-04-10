@@ -11,5 +11,4 @@ Welcome to BioMaster's documentation!
    installation
    usage
    rag
-   file_structure
-   citation
+   other

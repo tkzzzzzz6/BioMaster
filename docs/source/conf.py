@@ -1,35 +1,31 @@
+# docs/source/conf.py
+
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))  # 加入项目路径
-
-html_theme = 'sphinx_rtd_theme'
-
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+sys.path.insert(0, os.path.abspath('../..'))  # 将项目根目录加入路径
 
 project = 'BioMaster'
-copyright = '2025, Houcheng Su'
-author = 'Houcheng Su'
-release = '1.0'
+author = 'Su Houcheng et al.'
+release = '0.1'
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.todo'
+]
 
-extensions = []
+# 使用 Read the Docs 主题
+html_theme = 'sphinx_rtd_theme'
 
+# 设置模板路径（如果你使用自定义模板）
 templates_path = ['_templates']
-exclude_patterns = []
 
-language = 'English'
+# 设置不包含的文件和目录
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = 'alabaster'
+# 静态文件（如 logo 或 css）路径
 html_static_path = ['_static']
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+
+# TODO 显示设置
+todo_include_todos = True
