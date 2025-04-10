@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html lang="English" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>How to Use BioMaster &#8212; BioMaster 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=cd5f4460"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Knowledge Management with RAG" href="rag.html" />
+    <link rel="prev" title="Introduction to BioMaster" href="introduction.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-to-use-biomaster">
+<h1>How to Use BioMaster<a class="headerlink" href="#how-to-use-biomaster" title="Link to this heading">¶</a></h1>
+<section id="using-from-terminal">
+<h2>Using from Terminal<a class="headerlink" href="#using-from-terminal" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Set API key and base URL</p></li>
+<li><p>Move script into root folder</p></li>
+<li><p>Download data to <cite>./data/</cite></p></li>
+<li><p>Set <cite>id</cite></p></li>
+<li><p>Run:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>run.py
+</pre></div>
+</div>
+<p>Results are saved in <cite>./output/{id}/</cite>.</p>
+</section>
+<section id="using-the-ui">
+<h2>Using the UI<a class="headerlink" href="#using-the-ui" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Run the UI:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>runv.py
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Visit <a class="reference external" href="http://127.0.0.1:7860/">http://127.0.0.1:7860/</a></p></li>
+<li><p>Set parameters, define task, generate and execute plan interactively.</p></li>
+</ol>
+</section>
+<section id="output-format">
+<h2>Output Format<a class="headerlink" href="#output-format" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>PLAN file: <cite>output/{id}_PLAN.json</cite></p></li>
+<li><p>Scripts: <cite>output/{id}_Step_{n}.sh</cite></p></li>
+<li><p>Logs: <cite>output/{id}_DEBUG_Output_{n}.json</cite></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">BioMaster</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction to BioMaster</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to Use BioMaster</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#using-from-terminal">Using from Terminal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-ui">Using the UI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-format">Output Format</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="rag.html">Knowledge Management with RAG</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="introduction.html" title="previous chapter">Introduction to BioMaster</a></li>
+      <li>Next: <a href="rag.html" title="next chapter">Knowledge Management with RAG</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Houcheng Su.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
