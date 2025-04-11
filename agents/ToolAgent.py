@@ -14,7 +14,7 @@ import os
 
 def Json_Format_Agent(json_string,api_key,base_url):
         os.environ['OPENAI_API_KEY'] = api_key
-        # 创建一个用于修正 JSON 的提示模板
+        # Create a prompt template for JSON correction
         template = """
         You are an expert in JSON formatting.
         You cannot reply to anything other than json format.
@@ -30,13 +30,13 @@ def Json_Format_Agent(json_string,api_key,base_url):
         
         prompt = ChatPromptTemplate.from_template(template)
         
-        # 使用 OpenAI 的 GPT-3.5 模型
+        # Use OpenAI's GPT-3.5 model
         llm = ChatOpenAI(model="gpt-4o-mini",base_url=base_url)
         parser = StrOutputParser()
-        # 创建一个 LLMChain
+        # Create an LLMChain
         chain = prompt | llm|parser
         
-        # 生成修正后的 JSON
+        # Generate corrected JSON
         corrected_json = chain.invoke({"json_string": json_string})
         
         return corrected_json

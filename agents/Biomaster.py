@@ -4,7 +4,7 @@ import json
 import re
 import logging
 from datetime import datetime
-import uuid  # 用于生成唯一ID
+import uuid  # Used for generating unique IDs
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
@@ -13,14 +13,14 @@ from langchain import hub
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader, TextLoader, PyPDFLoader
-from langchain_chroma import Chroma  # 使用 langchain_chroma 包中的 Chroma
+from langchain_chroma import Chroma  # Using Chroma from langchain_chroma package
 from langchain_community.tools import ShellTool
 
 from .prompts import PLAN_PROMPT, PLAN_EXAMPLES, TASK_PROMPT, TASK_EXAMPLES, DEBUG_EXAMPLES, DEBUG_PROMPT
 from .ToolAgent import Json_Format_Agent
 from .CheckAgent import CheckAgent  # Add this import at the top
 
-# 配置日志记录
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -34,10 +34,10 @@ class Biomaster:
         Repeat: int = 5,
         output_dir: str = './output',
         id: str = '001',
-        chroma_db_dir: str = './chroma_db',  # Chroma持久化目录
-        token_log_path: str = './token.txt'  # 添加 token 日志路径参数
+        chroma_db_dir: str = './chroma_db',  # Chroma persistence directory
+        token_log_path: str = './token.txt'  # Add token log path parameter
     ):
-        # 设置 USER_AGENT 环境变量以消除警告
+        # Set USER_AGENT environment variable to eliminate warnings
         os.environ['USER_AGENT'] = 'Biomaster/1.0'
         os.environ['OPENAI_API_KEY'] = api_key
         self.api_key = api_key
@@ -47,7 +47,7 @@ class Biomaster:
         self.excutor = excutor
         self.repeat = Repeat
         self.output_dir = output_dir
-        self.stop_flag = False  # 标志位
+        self.stop_flag = False  # Flag
         self.token_log_path = token_log_path
 
         if id == '000':
@@ -73,23 +73,23 @@ class Biomaster:
 
         self.embeddings = OpenAIEmbeddings(model="text-embedding-ada-002", base_url=self.base_url)
 
-        # 存储集合名称
+        # Store collection name
         self.collection1_name = "popgen_collection1"
         self.collection2_name = "popgen_collection2"
 
-        # 初始化Chroma向量存储，指定持久化目录
+        # Initialize Chroma vector storage, specify persistence directory
         self.vectorstore = Chroma(
             collection_name=self.collection1_name,
             embedding_function=self.embeddings,
-            persist_directory=os.path.join(chroma_db_dir, "collection1")  # 分开存储不同集合
+            persist_directory=os.path.join(chroma_db_dir, "collection1")  # Separate storage for different collections
         )
         self.vectorstore_tool = Chroma(
             collection_name=self.collection2_name,
             embedding_function=self.embeddings,
-            persist_directory=os.path.join(chroma_db_dir, "collection2")  # 分开存储不同集合
+            persist_directory=os.path.join(chroma_db_dir, "collection2")  # Separate storage for different collections
         )
 
-        # 加载知识数据（仅添加新数据）
+        # Load knowledge data (only add new data)
         self.Load_PLAN_RAG()
         self.Load_Tool_RAG()
 
@@ -104,7 +104,7 @@ class Biomaster:
         else:
             return input_dict
     def load_tool_links(self):
-        """读取Task_Knowledge.json并返回metadata下source的列表"""
+        """Read Task_Knowledge.json and return the list of source in metadata"""
         json_file_path = os.path.join(self.doc_dir, "Task_Knowledge.json")
         print(json_file_path)
         if os.path.exists(json_file_path):
@@ -130,14 +130,14 @@ class Biomaster:
         return f'{new_id:03d}'
 
     def _load_existing_files(self):
-        # 加载指定ID的PLAN和step文件
+        # Load PLAN and step files for specified ID
         plan_file = os.path.join(self.output_dir, f'{self.id}_PLAN.json')
         if os.path.exists(plan_file):
             self.plan_data = self.load_progress(self.output_dir, f'{self.id}_PLAN.json')
         else:
             print(f"No PLAN file found for ID: {self.id}")
 
-        # 这里可以添加更多逻辑来加载其他需要的文件
+        # Here you can add more logic to load other required files
 
     def check_stop(self):
         if self.stop_flag:
@@ -149,10 +149,10 @@ class Biomaster:
 
     def add_documents_if_not_exists(self, documents, collection, collection_name):
         """
-        添加文档到向量数据库，如果文档ID不存在。
-        :param documents: 列表，包含字典，字典中需有 'page_content' 和 'metadata' 键
-        :param collection: Chroma 向量数据库集合
-        :param collection_name: 字符串，集合名
+        Add documents to vector database if document ID does not exist.
+        :param documents: List, containing dictionaries, dictionaries need 'page_content' and 'metadata' keys
+        :param collection: Chroma vector database collection
+        :param collection_name: String, collection name
         """
         new_texts = []
         new_metadatas = []
@@ -160,11 +160,11 @@ class Biomaster:
         for doc in documents:
             doc_id = doc['metadata'].get("id")
             if not doc_id:
-                # 如果没有ID，生成一个唯一ID
+                # If no ID, generate a unique ID
                 doc_id = str(uuid.uuid4())
                 doc['metadata']['id'] = doc_id
 
-            # 使用 get 方法检查文档是否存在
+            # Use get method to check if document exists
             existing_docs = collection.get(ids=[doc_id])
             if not existing_docs['documents']:
                 new_texts.append(doc['page_content'])
@@ -177,19 +177,19 @@ class Biomaster:
 
     def Load_PLAN_RAG(self):
         """
-        从 JSON 文件中加载知识条目，并存储到 Chroma 向量数据库。
-        每个 JSON 条目作为一个独立单元进行存储和检索。
+        Load knowledge entries from JSON file and store them in Chroma vector database.
+        Each JSON entry is stored and retrieved as an independent unit.
         """
         json_file_path = os.path.join(self.doc_dir, "Plan_Knowledge.json")
 
         if not os.path.exists(json_file_path):
-            raise FileNotFoundError(f"JSON 文件未找到：{json_file_path}")
+            raise FileNotFoundError(f"JSON file not found: {json_file_path}")
 
         with open(json_file_path, "r", encoding="utf-8") as file:
             knowledge_data = json.load(file)
 
         if not isinstance(knowledge_data, list):
-            raise ValueError("JSON 文件格式错误：应包含一个知识条目列表")
+            raise ValueError("JSON file format error: Should contain a list of knowledge entries")
 
         documents = [
             {
@@ -200,23 +200,23 @@ class Biomaster:
         ]
         self.add_documents_if_not_exists(documents, self.vectorstore, self.collection1_name)
         logging.info("Loaded PLAN_RAG data.")
-        # Chroma 会自动持久化，无需显式调用 persist()
+        # Chroma will automatically persist, no need to explicitly call persist()
 
     def Load_Tool_RAG(self):
         """
-        从 JSON 文件中加载知识条目，并存储到 Chroma 向量数据库。
-        每个 JSON 条目作为一个独立单元进行存储和检索。
+        Load knowledge entries from JSON file and store them in Chroma vector database.
+        Each JSON entry is stored and retrieved as an independent unit.
         """
         json_file_path = os.path.join(self.doc_dir, "Task_Knowledge.json")
 
         if not os.path.exists(json_file_path):
-            raise FileNotFoundError(f"JSON 文件未找到：{json_file_path}")
+            raise FileNotFoundError(f"JSON file not found: {json_file_path}")
 
         with open(json_file_path, "r", encoding="utf-8") as file:
             knowledge_data = json.load(file)
 
         if not isinstance(knowledge_data, list):
-            raise ValueError("JSON 文件格式错误：应包含一个知识条目列表")
+            raise ValueError("JSON file format error: Should contain a list of knowledge entries")
 
         documents = [
             {
@@ -227,26 +227,26 @@ class Biomaster:
         ]
         self.add_documents_if_not_exists(documents, self.vectorstore_tool, self.collection2_name)
         logging.info("Loaded Tool_RAG data.")
-        # Chroma 会自动持久化，无需显式调用 persist()
+        # Chroma will automatically persist, no need to explicitly call persist()
 
     def log_token_usage(self, model_name, input_tokens, output_tokens):
         """
-        记录模型token使用情况到日志文件
+        Record model token usage to log file
         
-        :param model_name: 使用的模型名称
-        :param input_tokens: 输入token数量
-        :param output_tokens: 输出token数量
+        :param model_name: Used model name
+        :param input_tokens: Input token count
+        :param output_tokens: Output token count
         """
         log_entry = f"Model: {model_name}, Input tokens: {input_tokens}, Output tokens: {output_tokens}\n"
         
-        # 确保日志目录存在
+        # Ensure log directory exists
         os.makedirs(os.path.dirname(os.path.abspath(self.token_log_path)), exist_ok=True)
         
-        # 将日志追加到文件
+        # Append log to file
         with open(self.token_log_path, "a", encoding="utf-8") as log_file:
             log_file.write(log_entry)
         
-        # 同时输出到控制台
+        # Output to console as well
         logging.info(f"Token usage: {log_entry.strip()}")
 
     def _create_agent(self, prompt_template, examples):
@@ -285,12 +285,12 @@ class Biomaster:
         ]
 
         with open(shell_script_path, "w", encoding="utf-8") as file:
-            # 先写入前缀命令
+            # Write prefix commands first
             file.write("#!/bin/bash\n")
             for command in code_prefix:
                 file.write(command + "\n")
 
-            # 写入实际的shell命令
+            # Write actual shell commands
             for command in commands:
                 file.write(f"{command}\n")
         return shell_script_path
@@ -302,10 +302,10 @@ class Biomaster:
         file_name = f"{self.id}_{file_name}"
         file_path = os.path.join(output_dir, file_name)
 
-        # 确保输出目录存在
+        # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
 
-        # 写入数据
+        # Write data
         with open(file_path, "w", encoding="utf-8") as file:
             json.dump(step_data, file, indent=4)
 
@@ -322,17 +322,17 @@ class Biomaster:
         output_files = []
         output_dir_path = os.path.join(self.output_dir, str(self.id))
 
-        # 遍历output目录下的所有文件
+        # Iterate through all files in output directory
         for root, dirs, files in os.walk(output_dir_path):
             for file in files:
-                if file.endswith(('.json', '.sh', '.txt')):  # 您可以根据文件类型进行过滤
+                if file.endswith(('.json', '.sh', '.txt')):  # You can filter files based on their type
                     output_files.append(os.path.join(root, file))
 
         return output_files
 
     def execute_PLAN(self, goal, datalist):
         """
-        生成新的PLAN，覆盖之前的PLAN.json，同时保存旧的计划和步骤输出到历史记录。
+        Generate new PLAN, overwrite previous PLAN.json, and save old plan and step outputs to history.
         """
         plan_file_path = os.path.join(self.output_dir, "PLAN.json")
         existing_plan = self.load_progress(self.output_dir, "PLAN.json")
@@ -342,13 +342,13 @@ class Biomaster:
             logging.info("existing PLAN found.")
         else:
             logging.info("No existing PLAN found. Proceeding to generate a new PLAN.")
-        # 生成新的PLAN
+        # Generate new PLAN
         logging.info("Generating a new PLAN.")
 
         related_docs = self.vectorstore.similarity_search(goal, k=1)
         related_docs_content = "\n\n".join([doc.page_content for doc in related_docs])
         logging.info(f"Related documents content: {related_docs_content}")
-        # 构建参考内容：仅使用相关文档内容作为参考
+        # Build reference content: Use related document content as reference
         combined_reference = related_docs_content
 
         PLAN_input = {
@@ -369,10 +369,10 @@ class Biomaster:
             logging.error(f"Failed to parse PLAN_results: {e}")
             return {}
 
-        # 保存新的PLAN，覆盖之前的PLAN.json
+        # Save new PLAN, overwrite previous PLAN.json
         self.save_progress(PLAN_results_dict, self.output_dir, "PLAN.json")
         logging.info("Saved new PLAN.json.")
-        # 保存到执行历史记录，使用mode=0表示新计划
+        # Save to execution history, use mode=0 for new plan
 
         logging.info("_____________________________________________________")
         logging.info(json.dumps(PLAN_results_dict, indent=4, ensure_ascii=False))
@@ -382,14 +382,14 @@ class Biomaster:
 
     def get_all_files_in_output_folder(self):
         """
-        获取 output/{id} 文件夹下的所有文件路径
+        Get all file paths in output/{id} folder
         """
         output_folder = os.path.join(self.output_dir, self.id)
         if not os.path.exists(output_folder):
             print(f"Folder {output_folder} does not exist.")
             return []
 
-        # 遍历所有文件
+        # Iterate through all files
         all_files = []
         for root, dirs, files in os.walk(output_folder):
             for file in files:
@@ -405,7 +405,7 @@ class Biomaster:
         if self.excutor:
             DEBUG_agent = self.DEBUG_agent
         ids = self.id
-        # 获取所有生成文件的路径，并将其添加到step['input filename']
+        # Get all generated file paths and add them to step['input filename']
         
         all_output_files = self.get_all_files_in_output_folder()
         print(f"All files in output/{ids}: {all_output_files}")
@@ -427,10 +427,10 @@ class Biomaster:
 
             related_docs = self.vectorstore_tool.similarity_search(step['description'], k=2)
 
-            # 将完整内容拼接为字符串，确保不截断
+            # Concatenate full content as string, ensure not truncated
             related_docs_content = "\n\n".join([doc.page_content for doc in related_docs])
             print(related_docs)
-            # 将遍历到的文件路径添加到step['input filename']中
+            # Add traversed file paths to step['input filename']
             additional_files = self.get_all_files_in_output_folder()
             step['input_filename'].extend(additional_files)
 
@@ -442,7 +442,7 @@ class Biomaster:
 
             generated_files = self._get_output_files()
             step['input_filename'].extend(generated_files)
-            step['input_filename'] = list(set(step['input_filename']))  # 去重
+            step['input_filename'] = list(set(step['input_filename']))  # Remove duplicates
             print(step['input_filename'])
 
             # Repeat Test count
@@ -451,7 +451,7 @@ class Biomaster:
             Json_Error = False
 
             while retry_count < self.repeat:
-                # 如果DEBUG_output_dict存在且stats为false，直接执行脚本
+                # If DEBUG_output_dict exists and stats is false, execute script directly
                 if DEBUG_output_dict and DEBUG_output_dict.get("stats") is False and retry_count==0:
                     TASK_results = DEBUG_output_dict.get("shell", "")  
                     PRE_DEBUG_output=[]      
@@ -460,9 +460,9 @@ class Biomaster:
                     if self.stop_flag:
                         break
                     # extract data from datalist
-                    # 假设 step['input_filename'] 已经存在并是一个列表
+                    # Assume step['input_filename'] already exists and is a list
                     new_input_filenames = [item.split(':')[0] for item in step_datalist]
-                    # 更新 step['input_filename']，确保没有重复文件路径
+                    # Update step['input_filename'], ensure no duplicate file paths
                     step['input_filename'] = list(set(step['input_filename'] + new_input_filenames))
                     # print(step['input_filename'])
 
@@ -470,7 +470,7 @@ class Biomaster:
                         "input": json.dumps({
                             "task": step,
                             "id": ids,
-                            "related_docs": related_docs_content,  # 使用related_docs_content
+                            "related_docs": related_docs_content,  # Use related_docs_content
                         })
                     }
                     TASK_results = TASK_agent.invoke(TASK_input)
@@ -485,7 +485,7 @@ class Biomaster:
                         logging.error(f"Failed to parse TASK_results: {e}")
                         TASK_results = ""
 
-                    # 如果不执行，则直接跳过后续步骤
+                    # If not executed, skip subsequent steps directly
                     if not self.excutor:
                         shell_script_path = self.shell_writing(TASK_results, i)
                         break
@@ -493,9 +493,9 @@ class Biomaster:
                 else:
                     TASK_results = DEBUG_output_dict.get("shell", "")
 
-                # 写为sh脚本
+                # Write as sh script
                 shell_script_path = self.shell_writing(TASK_results, i)
-                # 执行脚本
+                # Execute script
 
                 self.check_stop()
                 if self.stop_flag:
@@ -507,7 +507,7 @@ class Biomaster:
                 self.check_stop()
                 if self.stop_flag:
                     break
-                max_output_length = 5000  # 设置最大输出字符数
+                max_output_length = 5000  # Set maximum output character count
 
                 result_stdout = stdout_str[:max_output_length] if len(stdout_str) > max_output_length else stdout_str
                 result_stderr = stderr_str[:max_output_length] if len(stderr_str) > max_output_length else stderr_str
@@ -526,10 +526,10 @@ class Biomaster:
 
                 self.save_progress(DEBUG_input, self.output_dir, f"DEBUG_Input_{i}.json")
                 DEBUG_output = DEBUG_agent.invoke(DEBUG_input)
-                # 保存上次输入
+                # Save previous input
                 PRE_DEBUG_output.append(DEBUG_output)
 
-                # 规范格式
+                # Format
                 DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url)
 
                 try:

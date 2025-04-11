@@ -15,13 +15,13 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# 引入你自定义的 JSON 修复函数
+# Import your custom JSON repair function
 from .ToolAgent import Json_Format_Agent
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """
-    先尝试用 pdfplumber 提取文本；如果没有文本（扫描版），
-    则使用 pdf2image + pytesseract 来进行 OCR。
+    First attempt to extract text using pdfplumber; if no text is found (scanned version),
+    then use pdf2image + pytesseract for OCR.
     """
     extracted_text_pages = []
     with pdfplumber.open(pdf_path) as pdf:
@@ -33,7 +33,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     if all_text:
         return all_text
 
-    # 如果 pdfplumber 没取到文本，就 OCR
+    # If pdfplumber didn't get text, use OCR
     ocr_text_pages = []
     with tempfile.TemporaryDirectory() as tempdir:
         pages = convert_from_path(pdf_path, dpi=300, output_folder=tempdir)
@@ -44,99 +44,99 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
 def extract_text_from_url(url: str, process_images: bool = True, api_key: str = None) -> str:
     """
-    从网页URL提取文本内容，可选择性处理图片
+    Extract text content from a webpage URL, optionally process images
     
-    参数:
-        url: 网页地址
-        process_images: 是否处理网页中的图片
-        api_key: 用于视觉模型的API密钥
+    Parameters:
+        url: Web page URL
+        process_images: Whether to process images in the webpage
+        api_key: API key for vision model
     """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # 确保请求成功
+        response.raise_for_status()  # Ensure request was successful
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 移除script和style元素
+        # Remove script and style elements
         for script in soup(["script", "style"]):
             script.decompose()
             
-        # 获取文本
+        # Get text
         text = soup.get_text(separator='\n')
         
-        # 清理文本
+        # Clean text
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
         
-        # 如果启用了图片处理且提供了API密钥
+        # If image processing is enabled and API key is provided
         if process_images and api_key:
             image_texts = extract_text_from_images(soup, url, api_key)
             if image_texts:
-                text += "\n\n--- 图片内容 ---\n" + "\n\n".join(image_texts)
+                text += "\n\n--- Image Content ---\n" + "\n\n".join(image_texts)
         
         return text
     except Exception as e:
         return f"Error extracting text from URL: {str(e)}"
 
 def extract_text_from_images(soup, base_url, api_key):
-    """提取网页中的图片并进行OCR或视觉分析"""
+    """Extract images from webpage and perform OCR or visual analysis"""
     image_texts = []
     
-    # 查找所有图片标签
+    # Find all image tags
     for img in soup.find_all('img'):
         try:
-            # 获取图片URL
+            # Get image URL
             img_url = img.get('src')
             if not img_url:
                 continue
                 
-            # 将相对URL转为绝对URL
+            # Convert relative URL to absolute URL
             img_url = urljoin(base_url, img_url)
             
-            # 判断是否是真实图片 (排除图标等)
+            # Determine if it's a real image (exclude icons, etc.)
             if img.get('width') and int(img.get('width')) < 100:
                 continue
                 
-            # 下载图片
+            # Download image
             img_response = requests.get(img_url, stream=True)
             if img_response.status_code != 200:
                 continue
                 
-            # 打开图片
+            # Open image
             img_content = Image.open(io.BytesIO(img_response.content))
             
-            # 进行OCR处理
+            # Perform OCR processing
             text = pytesseract.image_to_string(img_content)
             
-            # 只保留有实质内容的OCR结果
-            if len(text.strip()) > 10:  # 假设少于10个字符的是噪音
+            # Only keep OCR results with substantial content
+            if len(text.strip()) > 10:  # Assume less than 10 characters is noise
                 image_texts.append(text)
                 
-            # 可选: 也可以替换/增加为视觉模型处理
+            # Optional: Can also replace/add vision model processing
             # vision_text = analyze_image_with_vision_model(img_content, api_key)
             # if vision_text:
             #     image_texts.append(vision_text)
             
         except Exception as e:
-            continue  # 忽略处理单张图片的错误，继续处理其他图片
+            continue  # Ignore errors processing a single image, continue with other images
             
     return image_texts
 
 def analyze_image_with_vision_model(image, api_key):
     """
-    使用视觉语言模型分析图片内容
-    这是一个示例实现，需要根据实际使用的API进行调整
+    Analyze image content using vision language model
+    This is an example implementation, needs to be adjusted based on the actual API used
     """
     try:
-        # 这里是集成视觉语言模型API的示例代码
-        # 例如可以使用OpenAI的GPT-4 Vision或其他视觉语言模型API
+        # This is sample code for integrating vision language model API
+        # For example, using OpenAI's GPT-4 Vision or other vision language model API
         
-        # 示例: 如果使用OpenAI
-        # 首先需要转换图像为base64格式
+        # Example: If using OpenAI
+        # First need to convert image to base64 format
         import base64
         from io import BytesIO
         
@@ -144,7 +144,7 @@ def analyze_image_with_vision_model(image, api_key):
         image.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
         
-        # 然后调用API
+        # Then call API
         # response = openai.chat.completions.create(
         #     model="gpt-4-vision-preview",
         #     messages=[
@@ -160,25 +160,25 @@ def analyze_image_with_vision_model(image, api_key):
         # )
         # return response.choices[0].message.content
         
-        # 由于这部分需要实际的API集成，返回占位符
-        return "视觉语言模型功能待集成"
+        # Since this part needs actual API integration, return placeholder
+        return "Vision language model functionality to be integrated"
         
     except Exception as e:
         return f"Error analyzing image: {str(e)}"
 
 def summarize_content_as_workflow(content_path: str, api_key: str, base_url: str, process_images: bool = True) -> str:
     """
-    1. 从PDF或网页中提取文本
-    2. 使用GPT对文本进行总结，输出指定JSON结构
-    3. 调用Json_Format_Agent修复JSON确保合法
+    1. Extract text from PDF or webpage
+    2. Use GPT to summarize text, output specific JSON structure
+    3. Call Json_Format_Agent to fix JSON ensuring validity
     
-    参数:
-        content_path: PDF文件路径或网页URL
-        api_key: OpenAI API密钥
-        base_url: OpenAI API基础URL
-        process_images: 处理网页图片（仅对URL有效）
+    Parameters:
+        content_path: PDF file path or webpage URL
+        api_key: OpenAI API key
+        base_url: OpenAI API base URL
+        process_images: Process webpage images (only valid for URLs)
     """
-    # 判断输入是PDF文件还是URL
+    # Determine if input is PDF file or URL
     is_url = bool(urlparse(content_path).scheme)
     
     if is_url:
@@ -221,22 +221,22 @@ def summarize_content_as_workflow(content_path: str, api_key: str, base_url: str
     parser = StrOutputParser()
     chain = summary_prompt | llm | parser
 
-    # 调用模型得到初步 JSON
+    # Call model to get preliminary JSON
     raw_json_output = chain.invoke({"text": all_text})
-    # 修复 JSON
+    # Fix JSON
     corrected_json = Json_Format_Agent(raw_json_output, api_key=api_key, base_url=base_url)
     return corrected_json
 
-# 保留原函数名作为别名，保持向后兼容
+# Keep original function name as alias for backward compatibility
 summarize_pdf_as_workflow = summarize_content_as_workflow
 
 def append_summary_to_plan_knowledge(corrected_json: str, plan_knowledge_path: str = "./doc/Plan_Knowledge.json"):
-    # 如果文件不存在，先创建一个空的 JSON 数组文件
+    # If file doesn't exist, create an empty JSON array file first
     if not os.path.exists(plan_knowledge_path):
         with open(plan_knowledge_path, 'w', encoding='utf-8') as f:
             f.write("[]")
 
-    # 读取原有 JSON
+    # Read existing JSON
     with open(plan_knowledge_path, 'r', encoding='utf-8') as f:
         try:
             existing_data = json.load(f)
@@ -246,35 +246,35 @@ def append_summary_to_plan_knowledge(corrected_json: str, plan_knowledge_path: s
     if not isinstance(existing_data, list):
         existing_data = [existing_data]
 
-    # 将字符串形式的 corrected_json 转成 Python 对象
+    # Convert string form of corrected_json to Python object
     try:
         new_summary_obj = json.loads(corrected_json)
     except json.JSONDecodeError:
-        print("传入的 corrected_json 不是合法 JSON 字符串，请检查。")
+        print("The provided corrected_json is not a valid JSON string, please check.")
         return
 
-    # 追加到列表
+    # Append to list
     existing_data.append(new_summary_obj)
 
-    # 写回文件
+    # Write back to file
     with open(plan_knowledge_path, 'w', encoding='utf-8') as f:
         json.dump(existing_data, f, ensure_ascii=False, indent=4)
 
 def generate_workflow_markdown(content_path: str, api_key: str, base_url: str, output_path: str = "plan_knowledge.md", process_images: bool = True) -> str:
     """
-    从文档内容生成Markdown格式的工作流描述，并保存到文件
+    Generate Markdown format workflow description from document content and save to file
     
-    参数:
-        content_path: PDF文件路径或网页URL
-        api_key: OpenAI API密钥
-        base_url: OpenAI API基础URL
-        output_path: 输出的Markdown文件路径
-        process_images: 处理网页图片（仅对URL有效）
+    Parameters:
+        content_path: PDF file path or webpage URL
+        api_key: OpenAI API key
+        base_url: OpenAI API base URL
+        output_path: Output Markdown file path
+        process_images: Process webpage images (only valid for URLs)
     
-    返回:
-        生成的Markdown内容字符串
+    Returns:
+        Generated Markdown content string
     """
-    # 判断输入是PDF文件还是URL
+    # Determine if input is PDF file or URL
     is_url = bool(urlparse(content_path).scheme)
     
     if is_url:
@@ -325,48 +325,48 @@ def generate_workflow_markdown(content_path: str, api_key: str, base_url: str, o
     parser = StrOutputParser()
     chain = summary_prompt | llm | parser
 
-    # 调用模型生成Markdown
+    # Call model to generate Markdown
     markdown_output = chain.invoke({"text": all_text})
     
-    # 保存Markdown到文件
+    # Save Markdown to file
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(markdown_output)
         
-    print(f"已生成工作流Markdown文件: {output_path}")
+    print(f"Generated workflow Markdown file: {output_path}")
     return markdown_output
 
 def convert_markdown_to_json(markdown_path: str, json_path: str = "./doc/Plan_Knowledge.json"):
     """
-    将Markdown格式的工作流转换为JSON格式并保存
+    Convert Markdown format workflow to JSON format and save
     
-    参数:
-        markdown_path: Markdown文件路径
-        json_path: 输出的JSON文件路径
+    Parameters:
+        markdown_path: Markdown file path
+        json_path: Output JSON file path
     """
     try:
-        # 读取Markdown文件
+        # Read Markdown file
         with open(markdown_path, 'r', encoding='utf-8') as f:
             markdown_content = f.read()
         
-        # 提取工作流标题
+        # Extract workflow title
         title_match = re.search(r'# Workflow for (.*?)(?:\n|$)', markdown_content)
         workflow_title = title_match.group(1) if title_match else "Unnamed Workflow"
         
-        # 构建文本内容，转换Markdown为纯文本格式
+        # Build text content, convert Markdown to plain text format
         text_content = f"This is a workflow for {workflow_title}\n\n"
         
-        # 提取每个步骤
+        # Extract each step
         step_pattern = r'## Step (\d+): (.*?)(?:\n|$)(.*?)(?=## Step \d+:|$)'
         steps = re.findall(step_pattern, markdown_content, re.DOTALL)
         
         for step_num, step_name, step_content in steps:
-            # 提取步骤详情
+            # Extract step details
             description = re.search(r'\*\*Description:\*\* (.*?)(?:\n|$)', step_content)
             input_req = re.search(r'\*\*Input Required:\*\* (.*?)(?:\n|$)', step_content)
             output = re.search(r'\*\*Expected Output:\*\* (.*?)(?:\n|$)', step_content)
             tool = re.search(r'\*\*Tool Used:\*\* (.*?)(?:\n|$)', step_content)
             
-            # 构建步骤文本
+            # Build step text
             step_text = f"Step {step_num}: {step_name}\n"
             if description: step_text += f"Description: {description.group(1)}\n"
             if input_req: step_text += f"Input Required: {input_req.group(1)}\n"
@@ -375,7 +375,7 @@ def convert_markdown_to_json(markdown_path: str, json_path: str = "./doc/Plan_Kn
             
             text_content += step_text + "\n"
         
-        # 构建JSON对象
+        # Build JSON object
         json_obj = {
             "content": text_content,
             "metadata": {
@@ -384,12 +384,12 @@ def convert_markdown_to_json(markdown_path: str, json_path: str = "./doc/Plan_Kn
             }
         }
         
-        # 准备保存到Plan_Knowledge.json
+        # Prepare to save to Plan_Knowledge.json
         if not os.path.exists(os.path.dirname(json_path)) and os.path.dirname(json_path):
             os.makedirs(os.path.dirname(json_path))
             
         if os.path.exists(json_path):
-            # 读取现有JSON
+            # Read existing JSON
             with open(json_path, 'r', encoding='utf-8') as f:
                 try:
                     existing_data = json.load(f)
@@ -401,17 +401,17 @@ def convert_markdown_to_json(markdown_path: str, json_path: str = "./doc/Plan_Kn
         if not isinstance(existing_data, list):
             existing_data = [existing_data]
             
-        # 添加新的JSON对象
+        # Add new JSON object
         existing_data.append(json_obj)
         
-        # 保存到文件
+        # Save to file
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(existing_data, f, ensure_ascii=False, indent=4)
             
-        print(f"已将Markdown转换为JSON并保存至: {json_path}")
+        print(f"Converted Markdown to JSON and saved to: {json_path}")
         return json.dumps(json_obj, ensure_ascii=False)
     
     except Exception as e:
-        print(f"转换过程中出错: {str(e)}")
+        print(f"Error during conversion: {str(e)}")
         return None
 
