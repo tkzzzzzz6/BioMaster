@@ -29,7 +29,7 @@ class Biomaster:
         self,
         api_key: str,
         base_url: str,
-        Model: str = "o3-mini",
+        Model: str = "gpt-4o",
         excutor: bool = False,
         Repeat: int = 5,
         output_dir: str = './output',
@@ -362,12 +362,7 @@ class Biomaster:
         PLAN_results = self.PLAN_agent.invoke(PLAN_input)
         print(PLAN_results)
         
-        # 使用修改后的Json_Format_Agent函数获取token使用情况
-        PLAN_results, format_input_tokens, format_output_tokens = Json_Format_Agent(
-            PLAN_results, self.api_key, self.base_url, return_tokens=True
-        )
-        self.log_token_usage(self.model, format_input_tokens, format_output_tokens)
-        
+        PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url)
         try:
             PLAN_results_dict = self.normalize_keys(json.loads(PLAN_results.strip().strip('"')))
         except json.JSONDecodeError as e:
@@ -479,11 +474,9 @@ class Biomaster:
                         })
                     }
                     TASK_results = TASK_agent.invoke(TASK_input)
-                    TASK_results, task_input_tokens, task_output_tokens = Json_Format_Agent(
-                        TASK_results, self.api_key, self.base_url, return_tokens=True
-                    )
-                    if task_input_tokens and task_output_tokens:
-                        self.log_token_usage(self.model, task_input_tokens, task_output_tokens)
+                    PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url)
+
+
                     PRE_DEBUG_output = []
                     try:
                         TASK_results = json.loads(TASK_results)

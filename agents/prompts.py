@@ -19,6 +19,7 @@ Your detailed step-by-step sub-tasks in a list to finish your goal, fixed format
 The key name of the json file must conform to "step_number","description","input_filename","output_filename", and "tools".
 You should do as much analysis as you can with the tools you have.
 Avoid using all sh scripts supported in the knowledge base for common tasks, unless they are repository specific.
+Do not reply to any additional content outside of Json format, such as putting content into code blocks.
 """
 
 PLAN_EXAMPLES = [
