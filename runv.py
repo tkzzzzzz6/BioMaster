@@ -5,17 +5,17 @@ import json
 import gradio as gr
 from agents.Biomaster import Biomaster
 
-# 全局 manager 对象，方便在不同按钮的回调中共享
+# Global manager object, convenient for sharing between different button callbacks
 manager = None
 
 def parse_datalist(datalist_text: str):
-    """将多行字符串转为列表，去除空行。"""
+    """Convert multi-line string to list, removing empty lines."""
     return [line.strip() for line in datalist_text.splitlines() if line.strip()]
 
 def load_knowledge_file(file_path):
-    """读取知识文件并返回内容"""
+    """Read knowledge file and return contents"""
     try:
-        # 如果文件不存在，创建一个空的JSON数组
+        # If file doesn't exist, create an empty JSON array
         if not os.path.exists(file_path):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
@@ -29,10 +29,10 @@ def load_knowledge_file(file_path):
         return {"error": str(e)}
 
 def show_plan_knowledge():
-    """显示Plan Knowledge内容"""
+    """Show Plan Knowledge content"""
     knowledge_data = load_knowledge_file("./doc/Plan_Knowledge.json")
     
-    # 构建HTML表格
+    # Build HTML table
     html = """
     <div id="knowledge-title">Plan Knowledge</div>
     <style>
@@ -70,7 +70,7 @@ def show_plan_knowledge():
     if "error" in knowledge_data:
         html += f"<tr><td colspan='3'>Error loading file: {knowledge_data['error']}</td></tr>"
     else:
-        # 假设知识文件是一个数组
+        # Assume knowledge file is an array
         for i, item in enumerate(knowledge_data):
             source = item.get("metadata", {}).get("source", "")
             page = item.get("metadata", {}).get("page", "")
@@ -88,10 +88,10 @@ def show_plan_knowledge():
     return gr.update(value=html)
 
 def show_task_knowledge():
-    """显示Task Knowledge内容"""
+    """Show Task Knowledge content"""
     knowledge_data = load_knowledge_file("./doc/Task_Knowledge.json")
     
-    # 构建HTML表格
+    # Build HTML table
     html = """
     <div id="knowledge-title">Task Knowledge</div>
     <style>
@@ -129,7 +129,7 @@ def show_task_knowledge():
     if "error" in knowledge_data:
         html += f"<tr><td colspan='3'>Error loading file: {knowledge_data['error']}</td></tr>"
     else:
-        # 假设知识文件是一个数组
+        # Assume knowledge file is an array
         for i, item in enumerate(knowledge_data):
             source = item.get("metadata", {}).get("source", "")
             page = item.get("metadata", {}).get("page", "")
@@ -147,59 +147,59 @@ def show_task_knowledge():
     return gr.update(value=html)
 
 def hide_knowledge():
-    """隐藏知识展示区域"""
+    """Hide knowledge display area"""
     return gr.update(visible=False)
 
 def generate_plan(api_key, base_url, goal, datalist, sample_id):
     """
-    第一个按钮：生成 Plan
-    调用 manager.execute_PLAN(goal, datalist)，并返回状态消息。
+    First button: Generate Plan
+    Call manager.execute_PLAN(goal, datalist), and return status message.
     """
     global manager
-    # 每次生成Plan时，都重新创建一个 Biomaster 实例
+    # Create a new Biomaster instance each time a Plan is generated
     manager = Biomaster(api_key, base_url, excutor=True, id=sample_id)
     manager.execute_PLAN(goal, parse_datalist(datalist))
-    return "已生成 Plan."
+    return "Plan generated."
 
 def execute_plan(api_key, base_url, goal, datalist, sample_id):
     """
-    第二个按钮：执行 Plan
-    调用 manager.execute_TASK(datalist)，并返回状态消息。
+    Second button: Execute Plan
+    Call manager.execute_TASK(datalist), and return status message.
     """
     global manager
-    # 如果还没有创建 manager，则在这里创建
+    # If manager hasn't been created yet, create it here
     if manager is None:
         manager = Biomaster(api_key, base_url, excutor=True, id=sample_id)
     manager.execute_TASK(parse_datalist(datalist))
-    return "已执行 Plan."
+    return "Plan executed."
 
 def stop_task():
     """
-    第三个按钮：中止任务
-    调用 manager.stop()。
+    Third button: Stop task
+    Call manager.stop().
     """
     global manager
     if manager is not None:
         manager.stop()
-        return "已中止任务."
-    return "当前无运行中的任务."
+        return "Task stopped."
+    return "No running task."
 
 def load_outputs(api_key, base_url, goal, datalist_text, sample_id):
     """
-    加载并展示当前输出：
+    Load and display current outputs:
     1) {id}_PLAN.json
-    2) 最大步骤号对应的 {id}_Step_{step_number}.sh
-    3) 对应 {id}_Debug_Output_{step_number}.json
-    4) 列出 ./output/{id}/ 文件夹下所有文件
+    2) The maximum step number corresponding to {id}_Step_{step_number}.sh
+    3) Corresponding {id}_Debug_Output_{step_number}.json
+    4) List all files in ./output/{id}/ folder
     """
-    # ---------- 1. 读取 PLAN ----------
+    # ---------- 1. Read PLAN ----------
     plan_file = f"./output/{sample_id}_PLAN.json"
     plan_content = ""
     if os.path.exists(plan_file):
         with open(plan_file, "r", encoding="utf-8") as f:
             plan_content = f.read()
 
-    # ---------- 2. 找到最大 step_number ----------
+    # ---------- 2. Find the maximum step_number ----------
     step_sh_files = glob.glob(f"./output/{sample_id}_Step_*.sh")
     max_step = 0
     for file_path in step_sh_files:
@@ -209,7 +209,7 @@ def load_outputs(api_key, base_url, goal, datalist_text, sample_id):
             if step_num > max_step:
                 max_step = step_num
 
-    # 读取对应的 step.sh 内容
+    # Read corresponding step.sh content
     step_content = ""
     if max_step > 0:
         step_file = f"./output/{sample_id}_Step_{max_step}.sh"
@@ -217,7 +217,7 @@ def load_outputs(api_key, base_url, goal, datalist_text, sample_id):
             with open(step_file, "r", encoding="utf-8") as f:
                 step_content = f.read()
 
-    # ---------- 3. 读取 Debug_Output_{step_number}.json ----------
+    # ---------- 3. Read Debug_Output_{step_number}.json ----------
     debug_content = ""
     if max_step > 0:
         debug_file = f"./output/{sample_id}_DEBUG_Output_{max_step}.json"
@@ -225,49 +225,49 @@ def load_outputs(api_key, base_url, goal, datalist_text, sample_id):
             with open(debug_file, "r", encoding="utf-8") as f:
                 debug_content = f.read()
 
-    # ---------- 4. 列出 ./output/{sample_id}/ 文件夹下所有文件 ----------
+    # ---------- 4. List all files in ./output/{sample_id}/ folder ----------
     folder_path = f"./output/{sample_id}/"
     all_files_str = ""
     if os.path.isdir(folder_path):
         files_in_dir = os.listdir(folder_path)
         all_files_str = "\n".join(files_in_dir)
 
-    # 根据找到的 step_number 动态更新标签
+    # Dynamically update labels based on found step_number
     if max_step > 0:
-        step_label = f"STEP {max_step}.sh 内容"
-        debug_label = f"DEBUG {max_step}.json 内容"
+        step_label = f"STEP {max_step}.sh Content"
+        debug_label = f"DEBUG {max_step}.json Content"
     else:
-        step_label = "STEP .sh 内容（未找到）"
-        debug_label = "DEBUG .json 内容（未找到）"
+        step_label = "STEP .sh Content (Not found)"
+        debug_label = "DEBUG .json Content (Not found)"
 
     return [
-        plan_content,                           # 第1块: PLAN
-        gr.update(value=step_content, label=step_label),   # 第2块: STEP
-        gr.update(value=debug_content, label=debug_label), # 第3块: DEBUG
-        all_files_str                           # 第4块: 文件夹内容
+        plan_content,                           # Block 1: PLAN
+        gr.update(value=step_content, label=step_label),   # Block 2: STEP
+        gr.update(value=debug_content, label=debug_label), # Block 3: DEBUG
+        all_files_str                           # Block 4: Folder contents
     ]
 
 def save_plan_content(plan_content, sample_id):
-    """保存PLAN内容到文件"""
-    # 检查是否符合JSON格式
+    """Save PLAN content to file"""
+    # Check if it conforms to JSON format
     try:
-        json.loads(plan_content)  # 尝试解析JSON
+        json.loads(plan_content)  # Try parsing JSON
     except json.JSONDecodeError:
-        return gr.Warning("保存失败：内容不符合JSON格式").then(
-            lambda: None, None, None  # 返回None防止文本框内容被修改
+        return gr.Warning("Save failed: Content is not in JSON format").then(
+            lambda: None, None, None  # Return None to prevent text box content from being modified
         )
     
     plan_file = f"./output/{sample_id}_PLAN.json"
     try:
         with open(plan_file, "w", encoding="utf-8") as f:
             f.write(plan_content)
-        return gr.Info("PLAN 保存成功")
+        return gr.Info("PLAN saved successfully")
     except Exception as e:
-        return gr.Warning(f"保存失败: {str(e)}")
+        return gr.Warning(f"Save failed: {str(e)}")
 
 def save_step_content(step_content, sample_id):
-    """保存STEP内容到文件"""
-    # 找到最大 step_number
+    """Save STEP content to file"""
+    # Find the maximum step_number
     step_sh_files = glob.glob(f"./output/{sample_id}_Step_*.sh")
     max_step = 0
     for file_path in step_sh_files:
@@ -282,23 +282,23 @@ def save_step_content(step_content, sample_id):
         try:
             with open(step_file, "w", encoding="utf-8") as f:
                 f.write(step_content)
-            return gr.Info(f"STEP {max_step}.sh 保存成功")
+            return gr.Info(f"STEP {max_step}.sh saved successfully")
         except Exception as e:
-            return gr.Warning(f"保存失败: {str(e)}")
+            return gr.Warning(f"Save failed: {str(e)}")
     else:
-        return gr.Warning("未找到STEP文件，无法保存")
+        return gr.Warning("STEP file not found, cannot save")
 
 def save_debug_content(debug_content, sample_id):
-    """保存DEBUG内容到文件"""
-    # 检查是否符合JSON格式
+    """Save DEBUG content to file"""
+    # Check if it conforms to JSON format
     try:
-        json.loads(debug_content)  # 尝试解析JSON
+        json.loads(debug_content)  # Try parsing JSON
     except json.JSONDecodeError:
-        return gr.Warning("保存失败：内容不符合JSON格式").then(
-            lambda: None, None, None  # 返回None防止文本框内容被修改
+        return gr.Warning("Save failed: Content is not in JSON format").then(
+            lambda: None, None, None  # Return None to prevent text box content from being modified
         )
     
-    # 找到最大 step_number
+    # Find the maximum step_number
     step_sh_files = glob.glob(f"./output/{sample_id}_Step_*.sh")
     max_step = 0
     for file_path in step_sh_files:
@@ -313,15 +313,15 @@ def save_debug_content(debug_content, sample_id):
         try:
             with open(debug_file, "w", encoding="utf-8") as f:
                 f.write(debug_content)
-            return gr.Info(f"DEBUG {max_step}.json 保存成功")
+            return gr.Info(f"DEBUG {max_step}.json saved successfully")
         except Exception as e:
-            return gr.Warning(f"保存失败: {str(e)}")
+            return gr.Warning(f"Save failed: {str(e)}")
     else:
-        return gr.Warning("未找到DEBUG文件，无法保存")
+        return gr.Warning("DEBUG file not found, cannot save")
 
 def add_knowledge_entry(knowledge_type, source, page, content):
-    """添加新的知识条目到对应的知识库文件"""
-    # knowledge_type 现在直接是 'plan' 或 'task'
+    """Add a new knowledge entry to the corresponding knowledge base file"""
+    # knowledge_type is now directly 'plan' or 'task'
     if knowledge_type == "plan":
         file_path = "./doc/Plan_Knowledge.json"
     else:
@@ -344,21 +344,21 @@ def add_knowledge_entry(knowledge_type, source, page, content):
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
         
-        # 返回更新后的HTML
+        # Return updated HTML
         if knowledge_type == "plan":
             return show_plan_knowledge(), gr.update(visible=False)
         else:
             return show_task_knowledge(), gr.update(visible=False)
     
     except Exception as e:
-        return gr.update(value=f"<div style='color:red'>添加失败: {str(e)}</div>"), gr.update(visible=True)
+        return gr.update(value=f"<div style='color:red'>Addition failed: {str(e)}</div>"), gr.update(visible=True)
 
 with gr.Blocks(css="""
     #hide-btn {
         position: fixed;
         left: 10px;
         top: 55%;
-        z-index: 300; /* 最高层级 */
+        z-index: 300; /* Highest level */
         transform: translateY(-50%);
         font-size: 1em !important;
         padding: 0.6em 1em !important;
@@ -381,7 +381,7 @@ with gr.Blocks(css="""
         position: fixed;
         left: 10px;
         top: 45%;
-        z-index: 300; /* 最高层级 */
+        z-index: 300; /* Highest level */
         transform: translateY(-50%);
         font-size: 1em !important;
         padding: 0.6em 1em !important;
@@ -407,7 +407,7 @@ with gr.Blocks(css="""
         width: 100%;
         height: 100%;
         background-color: rgba(255, 255, 255, 0.97);
-        z-index: 200; /* 中间层级 */
+        z-index: 200; /* Middle level */
         padding: 30px;
         overflow-y: auto;
         box-shadow: 0 0 15px rgba(0,0,0,0.3);
@@ -428,16 +428,16 @@ with gr.Blocks(css="""
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 0 20px rgba(0,0,0,0.4);
-        z-index: 400; /* 最高层级 */
+        z-index: 400; /* Highest level */
         width: 60%;
         max-width: 600px;
     }
     .main-content {
-        z-index: 100; /* 最底层级 */
+        z-index: 100; /* Lowest level */
         position: relative;
     }
     
-    /* 定制按钮颜色 */
+    /* Custom button colors */
     .knowledge-btn {
         background-color: #9c27b0 !important;
         color: white !important;
@@ -530,31 +530,31 @@ function() {
 """) as demo:
     gr.Markdown("## Biomaster")
 
-    # 创建隐藏的sample_id存储，用于按钮回调
+    # Create hidden sample_id storage for button callbacks
     sample_id_state = gr.State("")
     
-    # 知识展示区域（初始隐藏，浮动在页面上层）
+    # Knowledge display area (initially hidden, floating on top of the page)
     with gr.Column(visible=False, elem_id="knowledge-overlay") as knowledge_container:
         knowledge_html = gr.HTML()
     
-    # 添加知识表单（初始隐藏）
+    # Add knowledge form (initially hidden)
     with gr.Column(visible=False, elem_id="add-form") as add_form:
-        gr.Markdown("## 添加新知识条目")
-        knowledge_type = gr.Radio(["plan", "task"], label="知识类型")
+        gr.Markdown("## Add New Knowledge Entry")
+        knowledge_type = gr.Radio(["plan", "task"], label="Knowledge Type")
         source_input = gr.Textbox(label="Source")
         page_input = gr.Textbox(label="Page")
         content_input = gr.Textbox(label="Content", lines=5)
         with gr.Row():
             cancel_add_btn = gr.Button("Cancel", elem_classes="cancel-btn")
-            save_add_btn = gr.Button("保存", variant="primary", elem_classes="save-btn")
+            save_add_btn = gr.Button("Save", variant="primary", elem_classes="save-btn")
     
-    # 悬浮按钮（初始隐藏）
+    # Floating buttons (initially hidden)
     add_knowledge_btn = gr.Button("Add Knowledge", variant="secondary", visible=False, elem_id="add-btn")
     hide_knowledge_btn = gr.Button("Close Windows", variant="secondary", visible=False, elem_id="hide-btn")
     
-    # 主体内容区域（标记为main-content，以便设置z-index）
+    # Main content area (marked as main-content for z-index setting)
     with gr.Column(elem_classes="main-content"):
-        # 顶部知识按钮
+        # Top knowledge buttons
         with gr.Row():
             with gr.Column(scale=1):
                 with gr.Row():
@@ -562,7 +562,7 @@ function() {
                     task_knowledge_btn = gr.Button("Task Knowledge", variant="primary", elem_classes="knowledge-btn")
         
         with gr.Row(equal_height=True):
-            # 左侧输入与按钮
+            # Left side inputs and buttons
             with gr.Column(scale=1):
                 base_url_in = gr.Textbox(label="Base URL", value="https://sg.uiuiapi.com/v1")
                 api_key_in = gr.Textbox(label="API Key", value="sk-xxx...")
@@ -575,44 +575,44 @@ function() {
                 )
                 sample_id_in = gr.Textbox(label="ID", value="010")
 
-                # 3 个新按钮
+                # 3 new buttons
                 generate_plan_button = gr.Button("Generate Plan", elem_classes="generate-btn")
                 execute_plan_button = gr.Button("Execute Plan", elem_classes="execute-btn")
                 stop_button = gr.Button("STOP Plan", elem_classes="stop-btn")
 
-                # 原有"加载并展示"按钮
+                # Original "Load and Show" button
                 load_button = gr.Button("Load and Show", elem_classes="load-btn")
 
-                # 状态消息输出
+                # Status message output
                 status_box = gr.Textbox(label="Status", lines=2)
 
-            # 右侧展示区域（从上到下四个块）
+            # Right side display area (four blocks from top to bottom)
             with gr.Column(scale=1):
-                # 第一个框：PLAN，可编辑
+                # First box: PLAN, editable
                 with gr.Row():
                     plan_box = gr.Textbox(label="PLAN JSON Content", lines=10, max_lines=10, interactive=True)
                     with gr.Column(scale=0, min_width=100):
                         plan_cancel_btn = gr.Button("Cancel", elem_classes="cancel-btn")
                         plan_save_btn = gr.Button("Save", variant="primary", elem_classes="save-btn")
                 
-                # 第二个框：STEP，可编辑
+                # Second box: STEP, editable
                 with gr.Row():
                     step_box = gr.Textbox(label="STEP .sh Content", lines=5, max_lines=5, interactive=True)
                     with gr.Column(scale=0, min_width=100):
                         step_cancel_btn = gr.Button("Cancel", elem_classes="cancel-btn")
                         step_save_btn = gr.Button("Save", variant="primary", elem_classes="save-btn")
                 
-                # 第三个框：DEBUG，可编辑
+                # Third box: DEBUG, editable
                 with gr.Row():
                     debug_box = gr.Textbox(label="DEBUG .json Content", lines=5, max_lines=5, interactive=True)
                     with gr.Column(scale=0, min_width=100):
                         debug_cancel_btn = gr.Button("Cancel", elem_classes="cancel-btn")
                         debug_save_btn = gr.Button("Save", variant="primary", elem_classes="save-btn")
                 
-                # 第四个框：文件列表，不可编辑
+                # Fourth box: file list, non-editable
                 files_box = gr.Textbox(label="Ouput dir Content", lines=5, max_lines=5, interactive=False)
 
-    # 按钮回调 - 加载和执行
+    # Button callbacks - Load and Execute
     generate_plan_button.click(
         fn=generate_plan,
         inputs=[api_key_in, base_url_in, goal_in, datalist_in, sample_id_in],
@@ -629,10 +629,10 @@ function() {
         outputs=status_box
     )
 
-    # 加载并展示输出文件，同时更新sample_id_state
+    # Load and display output files, while updating sample_id_state
     def load_and_update_id(api_key, base_url, goal, datalist, sample_id):
         outputs = load_outputs(api_key, base_url, goal, datalist, sample_id)
-        return outputs + [sample_id]  # 额外返回sample_id
+        return outputs + [sample_id]  # Return sample_id as additional output
 
     load_button.click(
         fn=load_and_update_id,
@@ -640,7 +640,7 @@ function() {
         outputs=[plan_box, step_box, debug_box, files_box, sample_id_state]
     )
 
-    # PLAN Save和Cancel按钮回调
+    # PLAN Save and Cancel button callbacks
     plan_save_btn.click(
         fn=save_plan_content,
         inputs=[plan_box, sample_id_state],
@@ -652,7 +652,7 @@ function() {
         outputs=plan_box
     )
 
-    # STEP Save和Cancel按钮回调
+    # STEP Save and Cancel button callbacks
     step_save_btn.click(
         fn=save_step_content,
         inputs=[step_box, sample_id_state],
@@ -664,7 +664,7 @@ function() {
         outputs=step_box
     )
 
-    # DEBUG Save和Cancel按钮回调
+    # DEBUG Save and Cancel button callbacks
     debug_save_btn.click(
         fn=save_debug_content,
         inputs=[debug_box, sample_id_state],
@@ -676,7 +676,7 @@ function() {
         outputs=debug_box
     )
 
-    # 知识按钮回调
+    # Knowledge button callbacks
     def show_plan_and_controls():
         return [gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)]
         
@@ -700,28 +700,28 @@ function() {
         outputs=[knowledge_html, knowledge_container, add_knowledge_btn, hide_knowledge_btn]
     )
     
-    # 隐藏按钮回调
+    # Hide button callback
     hide_knowledge_btn.click(
         fn=lambda: [gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)],
         inputs=[],
         outputs=[knowledge_html, knowledge_container, add_knowledge_btn, hide_knowledge_btn]
     )
     
-    # 添加知识按钮回调
+    # Add knowledge button callback
     add_knowledge_btn.click(
         fn=lambda: gr.update(visible=True),
         inputs=[],
         outputs=[add_form]
     )
     
-    # Cancel添加按钮回调
+    # Cancel add button callback
     cancel_add_btn.click(
         fn=lambda: gr.update(visible=False),
         inputs=[],
         outputs=[add_form]
     )
     
-    # Save添加按钮回调
+    # Save add button callback
     save_add_btn.click(
         fn=add_knowledge_entry,
         inputs=[knowledge_type, source_input, page_input, content_input],
