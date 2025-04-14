@@ -40,7 +40,7 @@ if __name__ == "__main__":
     Model=tool_model = "deepseek-ai/DeepSeek-V3"
     tool_model = "deepseek-ai/DeepSeek-V3"
     # you can choose other base url
-    manager = Biomaster(api_key, base_url,excutor=True,id='014',Model=Model,embedding_model=embedding_model,tool_model=tool_model,embedding_base_url=embedding_base_url,embedding_api_key=embedding_api_key)
+    manager = Biomaster(api_key, base_url,excutor=True,id='001',Model=Model,embedding_model=embedding_model,tool_model=tool_model,embedding_base_url=embedding_base_url,embedding_api_key=embedding_api_key)
 
     datalist=[ './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)',
             './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)',
