@@ -1,0 +1,34 @@
+STAR version=2.7.11a
+STAR compilation time,server,dir=2023-09-15T02:58:53+0000 :/opt/conda/conda-bld/star_1694746407721/work/source
+##### Command Line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2 --runThreadN 4 --runMode genomeGenerate --genomeDir ./output/014/star_index --genomeFastaFiles ./data/minigenome.fa --genomeSAindexNbases 8
+##### Initial USER parameters from Command Line:
+###### All USER parameters from Command Line:
+runThreadN                    4     ~RE-DEFINED
+runMode                       genomeGenerate        ~RE-DEFINED
+genomeDir                     ./output/014/star_index     ~RE-DEFINED
+genomeFastaFiles              ./data/minigenome.fa        ~RE-DEFINED
+genomeSAindexNbases           8     ~RE-DEFINED
+##### Finished reading parameters from all sources
+
+##### Final user re-defined parameters-----------------:
+runMode                           genomeGenerate   
+runThreadN                        4
+genomeDir                         ./output/014/star_index
+genomeFastaFiles                  ./data/minigenome.fa   
+genomeSAindexNbases               8
+
+-------------------------------
+##### Final effective command line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2   --runMode genomeGenerate      --runThreadN 4   --genomeDir ./output/014/star_index   --genomeFastaFiles ./data/minigenome.fa      --genomeSAindexNbases 8
+----------------------------------------
+
+Number of fastq files for each mate = 1
+ParametersSolo: --soloCellFilterType CellRanger2.2 filtering parameters:  3000 0.99 10
+Finished loading and checking parameters
+--genomeDir directory exists and will be overwritten: ./output/014/star_index/
+Apr 11 17:27:35 ... starting to generate Genome files
+
+EXITING because of INPUT ERROR: could not read from genomeFastaFile: ./data/minigenome.fa
+
+Apr 11 17:27:35 ...... FATAL ERROR, exiting

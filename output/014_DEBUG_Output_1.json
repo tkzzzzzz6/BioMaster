@@ -1,0 +1,14 @@
+{
+    "shell": [
+        "conda install -y trimmomatic",
+        "trimmomatic PE -phred33 ./data/rnaseq_1.fastq.gz ./data/rnaseq_2.fastq.gz ./output/014/trimmed_rnaseq_1.fastq.gz ./output/014/trimmed_rnaseq_1_unpaired.fastq.gz ./output/014/trimmed_rnaseq_2.fastq.gz ./output/014/trimmed_rnaseq_2_unpaired.fastq.gz ILLUMINACLIP:./data/minigenome.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
+    ],
+    "analyze": "The quality control and adapter trimming task was completed successfully. Trimmomatic package was already installed and the paired-end reads were processed correctly, generating both trimmed and unpaired output files.",
+    "output_filename": [
+        "./output/014/trimmed_rnaseq_1.fastq.gz",
+        "./output/014/trimmed_rnaseq_2.fastq.gz",
+        "./output/014/trimmed_rnaseq_1_unpaired.fastq.gz",
+        "./output/014/trimmed_rnaseq_2_unpaired.fastq.gz"
+    ],
+    "stats": true
+}

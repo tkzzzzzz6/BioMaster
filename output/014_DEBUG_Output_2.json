@@ -1,0 +1,15 @@
+{
+    "shell": [
+        "conda install -y -c bioconda star samtools",
+        "mkdir -p ./output/014/star_index",
+        "STAR --runThreadN 4 --runMode genomeGenerate --genomeDir ./output/014/star_index --genomeFastaFiles ./data/minigenome.fa --genomeSAindexNbases 8",
+        "STAR --runThreadN 4 --genomeDir ./output/014/star_index --readFilesIn ./output/014/trimmed_rnaseq_1.fastq.gz ./output/014/trimmed_rnaseq_2.fastq.gz --readFilesCommand zcat --outFileNamePrefix ./output/014/ --outSAMtype BAM SortedByCoordinate --outBAMcompression 5",
+        "mv ./output/014/Aligned.sortedByCoord.out.bam ./output/014/aligned_rnaseq.bam",
+        "samtools index ./output/014/aligned_rnaseq.bam"
+    ],
+    "analyze": "The execution failed due to: 1) The genome file ./data/minigenome.fa was not found or accessible, preventing genome index generation. 2) The STAR alignment failed because the index wasn't properly generated. 3) The resulting BAM file was corrupted. Critical steps for correction include: a) Verify existence and permissions of ./data/minigenome.fa, b) Ensure sufficient disk space for index generation, c) Validate input FASTQ files, and d) Check write permissions in output directory.",
+    "output_filename": [
+        "./output/014/aligned_rnaseq.bam"
+    ],
+    "stats": false
+}

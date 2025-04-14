@@ -1,0 +1,3 @@
+exec > "./output/014/_STARtmp/tmp.fifo.read2"
+echo FILE 0
+zcat      "./output/014/trimmed_rnaseq_2.fastq.gz"

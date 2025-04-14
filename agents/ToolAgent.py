@@ -12,7 +12,7 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_community.tools import ShellTool
 import os
 
-def Json_Format_Agent(json_string,api_key,base_url):
+def Json_Format_Agent(json_string,api_key,base_url,tool_model='gpt-4o-mini'):
         os.environ['OPENAI_API_KEY'] = api_key
         # Create a prompt template for JSON correction
         template = """
@@ -31,7 +31,7 @@ def Json_Format_Agent(json_string,api_key,base_url):
         prompt = ChatPromptTemplate.from_template(template)
         
         # Use OpenAI's GPT-3.5 model
-        llm = ChatOpenAI(model="gpt-4o-mini",base_url=base_url)
+        llm = ChatOpenAI(model=tool_model,base_url=base_url)
         parser = StrOutputParser()
         # Create an LLMChain
         chain = prompt | llm|parser

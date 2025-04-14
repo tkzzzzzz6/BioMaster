@@ -1,0 +1,77 @@
+{
+    "plan": [
+        {
+            "step_number": 1,
+            "description": "Perform quality control and adapter trimming on the RNA-Seq reads using Trimmomatic. This step ensures that low-quality bases and adapters are removed before alignment.",
+            "input_filename": [
+                "./data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)",
+                "./data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)"
+            ],
+            "output_filename": [
+                "./output/014/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data (left read)",
+                "./output/014/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data (right read)"
+            ],
+            "tools": "Trimmomatic"
+        },
+        {
+            "step_number": 2,
+            "description": "Align the trimmed RNA-Seq reads to the small genome sequence using STAR. STAR is a fast and accurate aligner suitable for RNA-Seq data.",
+            "input_filename": [
+                "./output/014/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data (left read)",
+                "./output/014/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data (right read)",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/014/aligned_rnaseq.bam: aligned RNA-Seq reads in BAM format"
+            ],
+            "tools": "STAR"
+        },
+        {
+            "step_number": 3,
+            "description": "Sort and index the aligned BAM file using Samtools. This step prepares the BAM file for downstream analysis.",
+            "input_filename": [
+                "./output/014/aligned_rnaseq.bam: aligned RNA-Seq reads in BAM format"
+            ],
+            "output_filename": [
+                "./output/014/sorted_aligned_rnaseq.bam: sorted and indexed aligned RNA-Seq reads in BAM format"
+            ],
+            "tools": "Samtools"
+        },
+        {
+            "step_number": 4,
+            "description": "Perform variant calling using GATK (Genome Analysis Toolkit) HaplotypeCaller. This step identifies somatic SNVs and indels from the RNA-Seq data.",
+            "input_filename": [
+                "./output/014/sorted_aligned_rnaseq.bam: sorted and indexed aligned RNA-Seq reads in BAM format",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/014/variants.vcf: VCF file containing somatic SNVs and indels"
+            ],
+            "tools": "GATK HaplotypeCaller"
+        },
+        {
+            "step_number": 5,
+            "description": "Filter the variants to remove low-quality calls using GATK VariantFiltration. This step ensures that only high-quality variants are retained for further analysis.",
+            "input_filename": [
+                "./output/014/variants.vcf: VCF file containing somatic SNVs and indels",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/014/filtered_variants.vcf: filtered VCF file containing high-quality somatic SNVs and indels"
+            ],
+            "tools": "GATK VariantFiltration"
+        },
+        {
+            "step_number": 6,
+            "description": "Annotate the filtered variants using ANNOVAR. This step provides functional annotations for the identified variants, such as gene names, amino acid changes, and impact predictions.",
+            "input_filename": [
+                "./output/014/filtered_variants.vcf: filtered VCF file containing high-quality somatic SNVs and indels",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/014/annotated_variants.txt: annotated somatic SNVs and indels with functional information"
+            ],
+            "tools": "ANNOVAR"
+        }
+    ]
+}

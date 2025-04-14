@@ -29,17 +29,22 @@ class Biomaster:
         self,
         api_key: str,
         base_url: str,
-        Model: str = "gpt-4o",
+        Model: str = "o3-mini",
+        embedding_model: str = "text-embedding-ada-002",
+        tool_model: str = "gpt-4o-mini",
         excutor: bool = False,
         Repeat: int = 5,
         output_dir: str = './output',
         id: str = '001',
+        embedding_base_url: str=None,
+        embedding_api_key: str=None,
         chroma_db_dir: str = './chroma_db',  # Chroma persistence directory
         token_log_path: str = './token.txt'  # Add token log path parameter
     ):
         # Set USER_AGENT environment variable to eliminate warnings
         os.environ['USER_AGENT'] = 'Biomaster/1.0'
-        os.environ['OPENAI_API_KEY'] = api_key
+        
+        
         self.api_key = api_key
         self.base_url = base_url
         self.model = Model
@@ -49,7 +54,14 @@ class Biomaster:
         self.output_dir = output_dir
         self.stop_flag = False  # Flag
         self.token_log_path = token_log_path
-
+        self.tool_model = tool_model
+        if embedding_base_url== None or embedding_api_key== None:
+            self.embedding_base_url = self.base_url
+            self.embedding_api_key = self.api_key
+        else:
+            self.embedding_base_url = embedding_base_url
+            self.embedding_api_key = embedding_api_key
+        os.environ['OPENAI_API_KEY'] =  self.api_key
         if id == '000':
             self.id = self._generate_new_id()
         else:
@@ -71,7 +83,12 @@ class Biomaster:
         self.TASK_agent = self._create_agent(self.TASK_prompt, self.TASK_examples)
         self.PLAN_agent = self._create_agent(self.PLAN_prompt, self.PLAN_examples)
 
-        self.embeddings = OpenAIEmbeddings(model="text-embedding-ada-002", base_url=self.base_url)
+        # 创建embeddings实例时直接传递API密钥
+        self.embeddings = OpenAIEmbeddings(
+            model=embedding_model, 
+            base_url=self.embedding_base_url,
+            api_key=self.embedding_api_key
+        )
 
         # Store collection name
         self.collection1_name = "popgen_collection1"
@@ -94,7 +111,7 @@ class Biomaster:
         self.Load_Tool_RAG()
 
         # Initialize the CheckAgent
-        self.check_agent = CheckAgent(api_key=api_key, base_url=base_url, model=Model)
+        self.check_agent = CheckAgent(api_key=api_key, base_url=base_url, model=self.tool_model)
     def normalize_keys(self,input_dict):
         """ Recursively convert all dictionary keys to lowercase."""
         if isinstance(input_dict, dict):
@@ -172,8 +189,17 @@ class Biomaster:
                 new_ids.append(doc_id)
 
         if new_texts:
-            collection.add_texts(texts=new_texts, metadatas=new_metadatas, ids=new_ids)
-            logging.info(f"Added {len(new_texts)} new documents to {collection_name}")
+            # Process documents in batches of up to 32 (maximum bulk processing size for most embedded models)
+            batch_size = 32
+            for i in range(0, len(new_texts), batch_size):
+                batch_texts = new_texts[i:i+batch_size]
+                batch_metadatas = new_metadatas[i:i+batch_size]
+                batch_ids = new_ids[i:i+batch_size]
+                
+                collection.add_texts(texts=batch_texts, metadatas=batch_metadatas, ids=batch_ids)
+                logging.info(f"Added batch of {len(batch_texts)} documents to {collection_name} (batch {i//batch_size + 1})")
+            
+            logging.info(f"Added total of {len(new_texts)} new documents to {collection_name}")
 
     def Load_PLAN_RAG(self):
         """
@@ -362,7 +388,7 @@ class Biomaster:
         PLAN_results = self.PLAN_agent.invoke(PLAN_input)
         print(PLAN_results)
         
-        PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url)
+        PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url,tool_model=self.tool_model)
         try:
             PLAN_results_dict = self.normalize_keys(json.loads(PLAN_results.strip().strip('"')))
         except json.JSONDecodeError as e:
@@ -474,7 +500,7 @@ class Biomaster:
                         })
                     }
                     TASK_results = TASK_agent.invoke(TASK_input)
-                    PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url)
+                    TASK_results = Json_Format_Agent(TASK_results,  self.api_key, self.base_url,tool_model=self.tool_model)
 
 
                     PRE_DEBUG_output = []
@@ -530,7 +556,7 @@ class Biomaster:
                 PRE_DEBUG_output.append(DEBUG_output)
 
                 # Format
-                DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url)
+                DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url,tool_model=self.tool_model)
 
                 try:
                     print("***************************************************************")
@@ -576,7 +602,7 @@ class Biomaster:
                             
                             # Run DebugAgent again and parse result
                             DEBUG_output = DEBUG_agent.invoke(DEBUG_input)
-                            DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url)
+                            DEBUG_output = Json_Format_Agent(DEBUG_output, self.api_key, self.base_url,tool_model=self.tool_model)
                             
                             try:
                                 new_DEBUG_output_dict = json.loads(DEBUG_output)
