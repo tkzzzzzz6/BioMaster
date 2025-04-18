@@ -37,7 +37,7 @@ if __name__ == "__main__":
     embedding_api_key = ''
     embedding_base_url = 'https://api.siliconflow.cn/v1/'
     embedding_model='BAAI/bge-m3'
-    Model=tool_model = "deepseek-ai/DeepSeek-V3"
+    Model= "deepseek-ai/DeepSeek-V3"
     tool_model = "deepseek-ai/DeepSeek-V3"
     # you can choose other base url
     manager = Biomaster(api_key, base_url,excutor=True,id='001',Model=Model,embedding_model=embedding_model,tool_model=tool_model,embedding_base_url=embedding_base_url,embedding_api_key=embedding_api_key)
