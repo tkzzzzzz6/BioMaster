@@ -1,6 +1,29 @@
-# BioMaster配置文件
+# BioMaster settings
+    # support main model:
+    # o3-mini, o1, gpt-4o, o3-mini-2025-01-31, o1-2024-12-17
+    # claude-3-7-sonnet-thinking, claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022
+    # DeepSeek-V3, Deepseek-R1
+    # Qwen/QWQ-32B 
+    # LLAMA3-70B
+    # All other models can be tried, but it is suggested that if the main model chooses a better model, 
+    # the best model tested at present is o3-mini-2025-01-31
 
-# API配置
+    # support tool model:
+    # All LLMS can be tried, and you can choose some small models here.
+
+    # support emmbedding model
+    # text-embedding-004,
+    # text-embedding-3-large, text-embedding-3-small,
+    # text-embedding-ada-002
+    # BAAI/bge-m3
+
+    # suggest base url:
+    # https://api.bltcy.ai/v1
+    # https://gpt-api.hkust-gz.edu.cn/v1
+    # https://dashscope.aliyuncs.com/compatible-mode/v1
+    # https://api.openai.com/v1
+    # https://api.siliconflow.cn/v1
+    # https://sg.uiuiapi.com/v1
 api:
   main:
     key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'

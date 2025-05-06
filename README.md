@@ -298,14 +298,7 @@ The example code is located in the `./examples/` folder.
      ```
 
 ```python
-ffrom agents.Biomaster import Biomaster
-from langchain_core.messages import HumanMessage
-import json
-# Example of using the agent
-if __name__ == "__main__":
-
-    config = {"configurable": {"thread_id": "abc124"}}
-
+# BioMaster settings
     # support main model:
     # o3-mini, o1, gpt-4o, o3-mini-2025-01-31, o1-2024-12-17
     # claude-3-7-sonnet-thinking, claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022
@@ -331,27 +324,33 @@ if __name__ == "__main__":
     # https://api.openai.com/v1
     # https://api.siliconflow.cn/v1
     # https://sg.uiuiapi.com/v1
+api:
+  main:
+    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    base_url: 'https://api.siliconflow.cn/v1/'
+  embedding:
+    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    base_url: 'https://api.siliconflow.cn/v1/'
 
-    api_key = ''
-    base_url = 'https://api.siliconflow.cn/v1/'
-    embedding_api_key = ''
-    embedding_base_url = 'https://api.siliconflow.cn/v1/'
-    embedding_model='BAAI/bge-m3'
-    Model=tool_model = "deepseek-ai/DeepSeek-V3"
-    tool_model = "deepseek-ai/DeepSeek-V3"
-    # you can choose other base url
-    manager = Biomaster(api_key, base_url,excutor=True,id='001',Model=Model,embedding_model=embedding_model,tool_model=tool_model,embedding_base_url=embedding_base_url,embedding_api_key=embedding_api_key)
+# 模型配置
+models:
+  main: "deepseek-ai/DeepSeek-V3"
+  tool: "deepseek-ai/DeepSeek-V3"
+  embedding: "BAAI/bge-m3"
 
-    datalist=[ './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)',
-            './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)',
-            './data/minigenome.fa: small genome sequence consisting of ~750 genes.',]
-    goal='please do WGS/WES data analysis Somatic SNV+indel calling.'
-    manager.execute_PLAN(goal,datalist)
-    print("**********************************************************")
+# Biomaster配置
+biomaster:
+  executor: true
+  id: '002'
+  generate_plan: true
 
-    PLAN_results_dict = manager.execute_TASK(datalist)
-    print(PLAN_results_dict)
-
+# 数据和目标
+data:
+  files:
+    - './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)'
+    - './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)'
+    - './data/minigenome.fa: small genome sequence consisting of ~750 genes.'
+  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.' 
 ```
 #### How to Read the Output
 
@@ -385,9 +384,9 @@ Biomaster stores all output files in the `./output/` directory.
 
 1. **Stop the running task**.
 
-2. Comment out the following line in `run.py`:
+2. Comment out the following line in `config.yaml`:
    ```python
-   # manager.execute_PLAN(goal, datalist)
+   generate_plan: true->false
    ```
    This will prevent Biomaster from generating a new plan.
 
@@ -437,17 +436,19 @@ you want use this result to visualize:
 
 1. **Stop the running task**.
 
-2. **Modify the goal** in `run.py`:
+2. **Modify the goal** in `config.yaml`:
    ```python
-   goal='I want to visualize the result, this result is ./output/001/example.h5ad, which is a h5ad file, single cell data which is after normalization and quality control.'
+   goal:'I want to visualize the result, this result is ./output/001/example.h5ad, which is a h5ad file, single cell data which is after normalization and quality control.'
    ```
 
-3. **Modify the input data** in `run.py`:
+3. **Modify the input data** in `config.yaml`:
 
 ```python
-datalist=[ './output/001/example.h5ad: a h5ad file, single cell data which is after normalization and quality control.',]
+data:
+  files: 
+    - './output/001/example.h5ad: a h5ad file, single cell data which is after normalization and quality control.'
 ```
-4. **Modify the task id** in `run.py`:
+4. **Modify the task id** in `config.yaml`:
    ```python
    ids='002'
    ```
