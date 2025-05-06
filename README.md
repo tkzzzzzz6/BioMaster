@@ -135,7 +135,7 @@ https://drive.google.com/drive/folders/1vA3WIAVXVo4RZSqXKsItEZHVaBgIIv_E?usp=sha
 
 ---
 
-PS: liunx has been tested to install directly, but windwos or mac have not been tested, so there is no way to determine if there might be a problem.
+PS: Linux has been tested for direct installation, but Windows and Mac have not been tested, so it is uncertain whether any issues might arise.
 
 ## Usage
 
@@ -425,7 +425,38 @@ Biomaster stores all output files in the `./output/` directory.
    ```bash
    python run.py
    ```
+#### How to use current result start a new task
+example:
 
+If you use task `001` to generate a result:
+current result:
+```sh
+./output/001/example.h5ad
+```
+you want use this result to visualize:
+
+1. **Stop the running task**.
+
+2. **Modify the goal** in `run.py`:
+   ```python
+   goal='I want to visualize the result, this result is ./output/001/example.h5ad, which is a h5ad file, single cell data which is after normalization and quality control.'
+   ```
+
+3. **Modify the input data** in `run.py`:
+
+```python
+datalist=[ './output/001/example.h5ad: a h5ad file, single cell data which is after normalization and quality control.',]
+```
+4. **Modify the task id** in `run.py`:
+   ```python
+   ids='002'
+   ```
+
+3. **Run the script again**:
+   ```bash
+   python run.py
+   ```
+   
 ### Use Biomaster in UI Mode
 
 #### 1. Start the UI

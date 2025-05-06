@@ -1,0 +1,30 @@
+# BioMaster配置文件
+
+# API配置
+api:
+  main:
+    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    base_url: 'https://api.siliconflow.cn/v1/'
+  embedding:
+    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    base_url: 'https://api.siliconflow.cn/v1/'
+
+# 模型配置
+models:
+  main: "deepseek-ai/DeepSeek-V3"
+  tool: "deepseek-ai/DeepSeek-V3"
+  embedding: "BAAI/bge-m3"
+
+# Biomaster配置
+biomaster:
+  executor: true
+  id: '002'
+  generate_plan: true
+
+# 数据和目标
+data:
+  files:
+    - './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)'
+    - './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)'
+    - './data/minigenome.fa: small genome sequence consisting of ~750 genes.'
+  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.' 
