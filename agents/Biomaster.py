@@ -536,34 +536,15 @@ class Biomaster:
         
         all_output_files = self.get_all_files_in_output_folder()
         print(f"All files in output/{ids}: {all_output_files}")
-
-        # 检查各种可能的键
-        plan_data = None
-        if 'plan' in PLAN_results_dict:
-            plan_data = PLAN_results_dict['plan']
-        elif 'analysis_plan' in PLAN_results_dict:
-            # 如果是analysis_plan对象格式，将其转换为列表
-            analysis_plan = PLAN_results_dict['analysis_plan']
-            plan_data = []
-            step_keys = sorted([k for k in analysis_plan.keys() if k.startswith('step')], 
-                             key=lambda x: int(''.join(filter(str.isdigit, x))))
-            for step_key in step_keys:
-                step_data = analysis_plan[step_key]
-                step_data['step'] = int(''.join(filter(str.isdigit, step_key)))
-                plan_data.append(step_data)
-        
-        if not plan_data:
-            logging.error("No valid plan data found in PLAN_results_dict")
-            return None
         
         # 使用plan_data而不是PLAN_results_dict['plan']
-        for i in range(1, len(plan_data) + 1):
+        for i in range(1, len(PLAN_results_dict['plan']) + 1):
             print("Step:", i)
             self.check_stop()
             if self.stop_flag:
                 break
             
-            step = plan_data[i - 1]
+            step = PLAN_results_dict['plan'][i - 1]
             if self.excutor:
                 DEBUG_output_dict = self.load_progress(self.output_dir, f"DEBUG_Output_{i}.json")
 
