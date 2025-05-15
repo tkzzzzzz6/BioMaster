@@ -293,13 +293,9 @@ The example code is located in the `./examples/` folder.
    - Use the following command to execute:
      ```bash
      conda activate agent
-     python run.py
+     bash run.sh
      ```
-     or
-     ```bash
-     conda activate agent
-     python example1.py
-     ```
+
 
 ```python
 # BioMaster settings
