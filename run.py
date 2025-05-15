@@ -5,46 +5,59 @@ import json
 import os
 import sys
 
-# 从YAML配置文件加载配置
+# Load configuration from YAML file
 def load_config(config_path='config.yaml'):
-    """加载YAML配置文件"""
+    """Load YAML configuration file"""
     with open(config_path, 'r', encoding='utf-8') as file:
         return yaml.safe_load(file)
 
-# 主函数
+# Main function
 if __name__ == "__main__":
-    # 解析命令行参数，获取配置文件路径
+    # Parse command line arguments to get config file path
     config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
     
-    # 如果配置文件不存在，报错并退出
+    # If config file doesn't exist, report error and exit
     if not os.path.exists(config_path):
-        print(f"错误: 配置文件 '{config_path}' 不存在")
+        print(f"Error: Configuration file '{config_path}' does not exist")
         sys.exit(1)
     
-    # 加载配置
+    # Load configuration
     config = load_config(config_path)
     
-    # 从配置中获取API设置
+    # Get API settings from configuration
     api_key = config['api']['main']['key']
     base_url = config['api']['main']['base_url']
     embedding_api_key = config['api']['embedding']['key']
     embedding_base_url = config['api']['embedding']['base_url']
     
-    # 从配置中获取模型设置
+    # Ollama settings
+    use_ollama = config.get('biomaster', {}).get('use_ollama', False)
+    ollama_config = config.get('api', {}).get('ollama', {})
+    ollama_enabled = ollama_config.get('enabled', False)
+    # Use ollama if specified in both biomaster and ollama sections
+    use_ollama = use_ollama and ollama_enabled
+    ollama_base_url = ollama_config.get('base_url', 'http://localhost:11434')
+    
+    # Get model settings from configuration
     Model = config['models']['main']
-    tool_model = config['models']['tool']
+    tool_model = config['models'].get('tool', Model)  # Use main model if tool model not specified
     embedding_model = config['models']['embedding']
     
-    # 从配置中获取Biomaster设置
+    # Get Biomaster settings from configuration
     excutor = config['biomaster']['executor']
     ids = config['biomaster']['id']
-    generate_plan = config['biomaster'].get('generate_plan', True)  # 默认为True
+    generate_plan = config['biomaster'].get('generate_plan', True)  # Default to True
     
-    # 从配置中获取数据和目标
+    # Get data and goal from configuration
     datalist = config['data']['files']
     goal = config['data']['goal']
 
-    # 初始化Biomaster实例
+    print(f"Using ollama: {use_ollama}")
+    print(f"Ollama base URL: {ollama_base_url}")
+    print(f"Model: {Model}")
+    print(f"Embedding model: {embedding_model}")
+
+    # Initialize Biomaster instance
     manager = Biomaster(
         api_key, 
         base_url,
@@ -54,14 +67,25 @@ if __name__ == "__main__":
         embedding_model=embedding_model,
         tool_model=tool_model,
         embedding_base_url=embedding_base_url,
-        embedding_api_key=embedding_api_key
+        embedding_api_key=embedding_api_key,
+        use_ollama=use_ollama,
+        ollama_base_url=ollama_base_url
     )
+    
+    # If using ollama, test connection
+    if use_ollama:
+        print("Testing Ollama connection...")
+        if not manager.test_ollama_connection():
+            print("Warning: Unable to connect to ollama service or model not found. Continuing in API mode.")
+            manager.use_ollama = False
+        else:
+            print(f"Successfully connected to Ollama service, using model: {manager.ollama_model} and embedding model: {manager.ollama_embedding_model}")
 
-    # 根据配置决定是否执行PLAN
+    # Execute PLAN based on configuration
     if generate_plan:
         manager.execute_PLAN(goal, datalist)
         print("**********************************************************")
 
-    # 执行TASK
+    # Execute TASK
     PLAN_results_dict = manager.execute_TASK(datalist)
     print(PLAN_results_dict)

@@ -1,0 +1,38 @@
+STAR version=2.7.11a
+STAR compilation time,server,dir=2023-09-15T02:58:53+0000 :/opt/conda/conda-bld/star_1694746407721/work/source
+##### Command Line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2 --runThreadN 4 --genomeDir ./output/002/genome_index --readFilesIn ./data/rnaseq_1.fastq.gz ./data/rnaseq_2.fastq.gz --readFilesCommand zcat --outSAMtype SAM --outFileNamePrefix ./output/002/aligned_rnaseq_
+##### Initial USER parameters from Command Line:
+outFileNamePrefix                 ./output/002/aligned_rnaseq_
+###### All USER parameters from Command Line:
+runThreadN                    4     ~RE-DEFINED
+genomeDir                     ./output/002/genome_index     ~RE-DEFINED
+readFilesIn                   ./data/rnaseq_1.fastq.gz   ./data/rnaseq_2.fastq.gz        ~RE-DEFINED
+readFilesCommand              zcat        ~RE-DEFINED
+outSAMtype                    SAM        ~RE-DEFINED
+outFileNamePrefix             ./output/002/aligned_rnaseq_     ~RE-DEFINED
+##### Finished reading parameters from all sources
+
+##### Final user re-defined parameters-----------------:
+runThreadN                        4
+genomeDir                         ./output/002/genome_index
+readFilesIn                       ./data/rnaseq_1.fastq.gz   ./data/rnaseq_2.fastq.gz   
+readFilesCommand                  zcat   
+outFileNamePrefix                 ./output/002/aligned_rnaseq_
+outSAMtype                        SAM   
+
+-------------------------------
+##### Final effective command line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2   --runThreadN 4   --genomeDir ./output/002/genome_index   --readFilesIn ./data/rnaseq_1.fastq.gz   ./data/rnaseq_2.fastq.gz      --readFilesCommand zcat      --outFileNamePrefix ./output/002/aligned_rnaseq_   --outSAMtype SAM   
+----------------------------------------
+
+Number of fastq files for each mate = 1
+
+   Input read files for mate 1 :
+!!!!! WARNING:  Could not ls ./data/rnaseq_1.fastq.gz
+ls: cannot access './data/rnaseq_1.fastq.gz': No such file or directory
+
+EXITING: because of fatal INPUT file error: could not open read file: ./data/rnaseq_1.fastq.gz
+SOLUTION: check that this file exists and has read permision.
+
+May 14 11:08:19 ...... FATAL ERROR, exiting

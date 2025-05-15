@@ -5,8 +5,12 @@ import re
 import logging
 from datetime import datetime
 import uuid  # Used for generating unique IDs
+import requests
+import numpy as np
+from typing import List
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.embeddings import Embeddings
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain import hub
@@ -15,10 +19,13 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader, TextLoader, PyPDFLoader
 from langchain_chroma import Chroma  # Using Chroma from langchain_chroma package
 from langchain_community.tools import ShellTool
+from langchain_community.llms import Ollama  # Import Ollama support
 
 from .prompts import PLAN_PROMPT, PLAN_EXAMPLES, TASK_PROMPT, TASK_EXAMPLES, DEBUG_EXAMPLES, DEBUG_PROMPT
 from .ToolAgent import Json_Format_Agent
 from .CheckAgent import CheckAgent  # Add this import at the top
+from .ollama import OllamaEmbeddings
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -39,11 +46,12 @@ class Biomaster:
         embedding_base_url: str=None,
         embedding_api_key: str=None,
         chroma_db_dir: str = './chroma_db',  # Chroma persistence directory
-        token_log_path: str = './token.txt'  # Add token log path parameter
+        token_log_path: str = './token.txt',  # Add token log path parameter
+        use_ollama: bool = False,  # Whether to use ollama
+        ollama_base_url: str = "http://localhost:11434"  # Ollama API address
     ):
         # Set USER_AGENT environment variable to eliminate warnings
         os.environ['USER_AGENT'] = 'Biomaster/1.0'
-        
         
         self.api_key = api_key
         self.base_url = base_url
@@ -55,13 +63,27 @@ class Biomaster:
         self.stop_flag = False  # Flag
         self.token_log_path = token_log_path
         self.tool_model = tool_model
+        
+        # Ollama settings
+        self.use_ollama = use_ollama
+        self.ollama_base_url = ollama_base_url
+        
+        # Automatically map model names to ollama models
+        if self.use_ollama:
+            self.ollama_model = self.model
+            self.ollama_embedding_model = embedding_model
+        else:
+            self.ollama_model = None
+            self.ollama_embedding_model = None
+        
         if embedding_base_url== None or embedding_api_key== None:
             self.embedding_base_url = self.base_url
             self.embedding_api_key = self.api_key
         else:
             self.embedding_base_url = embedding_base_url
             self.embedding_api_key = embedding_api_key
-        os.environ['OPENAI_API_KEY'] =  self.api_key
+        os.environ['OPENAI_API_KEY'] = self.api_key
+        
         if id == '000':
             self.id = self._generate_new_id()
         else:
@@ -79,16 +101,26 @@ class Biomaster:
         self.TASK_examples = TASK_EXAMPLES
         self.DEBUG_examples = DEBUG_EXAMPLES
 
-        self.DEBUG_agent = self._create_agent(self.DEBUG_prompt, self.DEBUG_examples)
-        self.TASK_agent = self._create_agent(self.TASK_prompt, self.TASK_examples)
-        self.PLAN_agent = self._create_agent(self.PLAN_prompt, self.PLAN_examples)
-
-        # 创建embeddings实例时直接传递API密钥
-        self.embeddings = OpenAIEmbeddings(
-            model=embedding_model, 
-            base_url=self.embedding_base_url,
-            api_key=self.embedding_api_key
-        )
+        # Initialize agents
+        if self.use_ollama:
+            self.DEBUG_agent = self._create_ollama_agent(self.DEBUG_prompt, self.DEBUG_examples)
+            self.TASK_agent = self._create_ollama_agent(self.TASK_prompt, self.TASK_examples)
+            self.PLAN_agent = self._create_ollama_agent(self.PLAN_prompt, self.PLAN_examples)
+            # Use custom Ollama embeddings model
+            self.embeddings = OllamaEmbeddings(
+                base_url=self.ollama_base_url,
+                model=self.ollama_embedding_model
+            )
+        else:
+            self.DEBUG_agent = self._create_agent(self.DEBUG_prompt, self.DEBUG_examples)
+            self.TASK_agent = self._create_agent(self.TASK_prompt, self.TASK_examples)
+            self.PLAN_agent = self._create_agent(self.PLAN_prompt, self.PLAN_examples)
+            # Create embeddings instance and pass API key directly
+            self.embeddings = OpenAIEmbeddings(
+                model=embedding_model, 
+                base_url=self.embedding_base_url,
+                api_key=self.embedding_api_key
+            )
 
         # Store collection name
         self.collection1_name = "popgen_collection1"
@@ -111,7 +143,66 @@ class Biomaster:
         self.Load_Tool_RAG()
 
         # Initialize the CheckAgent
-        self.check_agent = CheckAgent(api_key=api_key, base_url=base_url, model=self.tool_model)
+        if self.use_ollama:
+            # If using ollama, CheckAgent also uses ollama
+            self.check_agent = CheckAgent(api_key="", base_url="", model="", use_ollama=True, 
+                                        ollama_base_url=self.ollama_base_url, ollama_model=self.ollama_model)
+        else:
+            self.check_agent = CheckAgent(api_key=api_key, base_url=base_url, model=self.tool_model)
+        
+    def _create_ollama_agent(self, prompt_template, examples):
+        """Create agent based on ollama"""
+        # Initialize Ollama LLM
+        ollama_llm = Ollama(base_url=self.ollama_base_url, model=self.ollama_model)
+        
+        example_prompt = ChatPromptTemplate.from_messages([
+            ("human", "{input}"),
+            ("ai", "{output}")
+        ])
+
+        few_shot_prompt = FewShotChatMessagePromptTemplate(
+            example_prompt=example_prompt,
+            examples=examples
+        )
+
+        parser = StrOutputParser()
+
+        final_prompt = ChatPromptTemplate.from_messages([
+            ("system", prompt_template),
+            few_shot_prompt,
+            ("human", "{input}")
+        ])
+
+        # Create original agent
+        agent = final_prompt | ollama_llm | parser
+        
+        return agent
+
+    def test_ollama_connection(self):
+        """
+        Test connection to ollama
+        
+        Returns:
+        - Boolean, indicating whether connection is successful
+        """
+        try:
+            response = requests.get(f"{self.ollama_base_url}/api/tags")
+            if response.status_code == 200:
+                available_models = [model["name"] for model in response.json().get("models", [])]
+                if self.ollama_model in available_models:
+                    logging.info(f"Successfully connected to ollama server, found required model: {self.ollama_model}")
+                    return True
+                else:
+                    available_models_str = ", ".join(available_models)
+                    logging.warning(f"Successfully connected to ollama server, but required model: {self.ollama_model} not found. Available models: {available_models_str}")
+                    return False
+            else:
+                logging.error(f"Failed to connect to ollama server: {response.status_code} - {response.text}")
+                return False    
+        except Exception as e:
+            logging.error(f"Failed to connect to ollama server: {str(e)}")
+            return False    
+    
     def normalize_keys(self,input_dict):
         """ Recursively convert all dictionary keys to lowercase."""
         if isinstance(input_dict, dict):
@@ -388,18 +479,28 @@ class Biomaster:
         PLAN_results = self.PLAN_agent.invoke(PLAN_input)
         print(PLAN_results)
         
-        PLAN_results = Json_Format_Agent(PLAN_results, self.api_key, self.base_url,tool_model=self.tool_model)
+        PLAN_results = Json_Format_Agent(
+            PLAN_results, 
+            self.api_key, 
+            self.base_url,
+            tool_model=self.tool_model,
+            use_ollama=self.use_ollama,
+            ollama_base_url=self.ollama_base_url,
+            ollama_model=self.ollama_model
+        )
+        
         try:
-            PLAN_results_dict = self.normalize_keys(json.loads(PLAN_results.strip().strip('"')))
-        except json.JSONDecodeError as e:
-            logging.error(f"Failed to parse PLAN_results: {e}")
-            return {}
-
-        # Save new PLAN, overwrite previous PLAN.json
+            parsed_plan = json.loads(PLAN_results.strip().strip('"'))
+            PLAN_results_dict = self.normalize_keys(parsed_plan)
+        except json.JSONDecodeError:
+            # 处理JSON解析错误
+            print(f"Error parsing PLAN JSON: {PLAN_results}")
+            return None
+        
+        # 保存PLAN并返回
         self.save_progress(PLAN_results_dict, self.output_dir, "PLAN.json")
         logging.info("Saved new PLAN.json.")
-        # Save to execution history, use mode=0 for new plan
-
+        
         logging.info("_____________________________________________________")
         logging.info(json.dumps(PLAN_results_dict, indent=4, ensure_ascii=False))
         logging.info("_____________________________________________________")
@@ -436,13 +537,33 @@ class Biomaster:
         all_output_files = self.get_all_files_in_output_folder()
         print(f"All files in output/{ids}: {all_output_files}")
 
-        for i in range(1, len(PLAN_results_dict['plan']) + 1):
+        # 检查各种可能的键
+        plan_data = None
+        if 'plan' in PLAN_results_dict:
+            plan_data = PLAN_results_dict['plan']
+        elif 'analysis_plan' in PLAN_results_dict:
+            # 如果是analysis_plan对象格式，将其转换为列表
+            analysis_plan = PLAN_results_dict['analysis_plan']
+            plan_data = []
+            step_keys = sorted([k for k in analysis_plan.keys() if k.startswith('step')], 
+                             key=lambda x: int(''.join(filter(str.isdigit, x))))
+            for step_key in step_keys:
+                step_data = analysis_plan[step_key]
+                step_data['step'] = int(''.join(filter(str.isdigit, step_key)))
+                plan_data.append(step_data)
+        
+        if not plan_data:
+            logging.error("No valid plan data found in PLAN_results_dict")
+            return None
+        
+        # 使用plan_data而不是PLAN_results_dict['plan']
+        for i in range(1, len(plan_data) + 1):
             print("Step:", i)
             self.check_stop()
             if self.stop_flag:
                 break
-            step = PLAN_results_dict['plan'][i - 1]
-
+            
+            step = plan_data[i - 1]
             if self.excutor:
                 DEBUG_output_dict = self.load_progress(self.output_dir, f"DEBUG_Output_{i}.json")
 
@@ -635,3 +756,22 @@ class Biomaster:
                 break
         
         return PLAN_results_dict
+
+    def _filter_thinking_process(self, text):
+        """
+        Filter out <think></think> tags and their contents
+        If not in ollama mode, return text directly
+        
+        Parameters:
+        - text: Text to filter
+        
+        Returns:
+        - Filtered text
+        """
+        if not self.use_ollama:
+            return text
+        
+        import re
+        # Use regex to remove <think>...</think> parts
+        filtered_text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        return filtered_text

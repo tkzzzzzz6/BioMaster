@@ -1,0 +1,30 @@
+STAR version=2.7.11a
+STAR compilation time,server,dir=2023-09-15T02:58:53+0000 :/opt/conda/conda-bld/star_1694746407721/work/source
+##### Command Line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2 --runMode genomeGenerate --genomeDir ./output/002/genome_index --genomeFastaFiles ./data/minigenome.fa
+##### Initial USER parameters from Command Line:
+###### All USER parameters from Command Line:
+runMode                       genomeGenerate        ~RE-DEFINED
+genomeDir                     ./output/002/genome_index     ~RE-DEFINED
+genomeFastaFiles              ./data/minigenome.fa        ~RE-DEFINED
+##### Finished reading parameters from all sources
+
+##### Final user re-defined parameters-----------------:
+runMode                           genomeGenerate   
+genomeDir                         ./output/002/genome_index
+genomeFastaFiles                  ./data/minigenome.fa   
+
+-------------------------------
+##### Final effective command line:
+/home/agent/miniconda3/envs/AGENT/bin/STAR-avx2   --runMode genomeGenerate      --genomeDir ./output/002/genome_index   --genomeFastaFiles ./data/minigenome.fa   
+----------------------------------------
+
+Number of fastq files for each mate = 1
+ParametersSolo: --soloCellFilterType CellRanger2.2 filtering parameters:  3000 0.99 10
+Finished loading and checking parameters
+--genomeDir directory exists and will be overwritten: ./output/002/genome_index/
+May 14 11:08:19 ... starting to generate Genome files
+
+EXITING because of INPUT ERROR: could not open genomeFastaFile: ./data/minigenome.fa
+
+May 14 11:08:19 ...... FATAL ERROR, exiting

@@ -2,61 +2,77 @@
     "plan": [
         {
             "step_number": 1,
-            "description": "Align the paired-end sequencing reads to the reference genome using BWA-MEM. Although the input files are labeled as RNA-seq, for this WGS/WES somatic variant analysis we will align the reads provided in the fastq files to the small genome reference. This step creates a SAM file with the alignment information that is needed for downstream processing.",
+            "description": "Perform adapter trimming and quality control on RNA-Seq paired-end reads using Trimmomatic. This step removes low-quality bases and sequencing adapters to ensure accurate alignment and variant calling. The input includes paired-end RNA-Seq reads and adapter sequences.",
             "input_filename": [
                 "./data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)",
                 "./data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)",
-                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+                "./data/TruSeq3-PE.fa: trimming adapter"
             ],
             "output_filename": [
-                "./output/001/aligned_reads.sam: SAM file of paired-end aligned reads"
+                "./output/001/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data (left read)",
+                "./output/001/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data (right read)"
             ],
-            "tools": "BWA-MEM"
+            "tools": "Trimmomatic"
         },
         {
             "step_number": 2,
-            "description": "Convert the SAM file to a BAM file using samtools. Converting to BAM provides a compressed binary format that is more efficient for storage and faster for downstream analyses.",
+            "description": "Align trimmed RNA-Seq reads to the small genome reference using STAR. STAR is a spliced aligner optimized for RNA-Seq data, ensuring accurate mapping of reads across exon-exon junctions. The output will be BAM files containing aligned reads for downstream analysis.",
             "input_filename": [
-                "./output/001/aligned_reads.sam: SAM file of paired-end aligned reads"
-            ],
-            "output_filename": [
-                "./output/001/aligned_reads.bam: BAM file of paired-end aligned reads"
-            ],
-            "tools": "samtools"
-        },
-        {
-            "step_number": 3,
-            "description": "Sort the BAM file using the samtools sort command to organize the alignment records by genomic coordinates. Sorting is a prerequisite for many downstream processing steps, including duplicate marking and variant calling.",
-            "input_filename": [
-                "./output/001/aligned_reads.bam: BAM file of paired-end aligned reads"
-            ],
-            "output_filename": [
-                "./output/001/sorted_aligned_reads.bam: Sorted BAM file of paired-end aligned reads"
-            ],
-            "tools": "samtools"
-        },
-        {
-            "step_number": 4,
-            "description": "Mark duplicate reads using GATK. Duplicate marking is important in somatic variant calling to reduce the impact of PCR duplicates on variant detection. This step will generate a deduplicated BAM file suitable for accurate variant calling.",
-            "input_filename": [
-                "./output/001/sorted_aligned_reads.bam: Sorted BAM file of paired-end aligned reads"
-            ],
-            "output_filename": [
-                "./output/001/dedup_sorted_aligned_reads.bam: Deduplicated sorted BAM file"
-            ],
-            "tools": "GATK"
-        },
-        {
-            "step_number": 5,
-            "description": "Call somatic SNVs and indels using GATK's Mutect2. In this step, the deduplicated BAM file and the reference genome are used to identify somatic variants. Mutect2 will produce a VCF file containing candidate somatic SNVs and indels. Further filtration steps can be applied after this to remove artifacts.",
-            "input_filename": [
-                "./output/001/dedup_sorted_aligned_reads.bam: Deduplicated sorted BAM file",
+                "./output/001/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data (left read)",
+                "./output/001/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data (right read)",
                 "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
             ],
             "output_filename": [
-                "./output/001/somatic_variants.vcf: VCF file with called somatic SNVs and indels"
+                "./output/001/aligned.bam: BAM format of aligned RNA-Seq reads"
             ],
-            "tools": "GATK"
+            "tools": "STAR"
+        },
+        {
+            "step_number": 3,
+            "description": "Sort and index the BAM file using Samtools to prepare it for variant calling and splicing analysis. Sorting ensures reads are ordered by genomic position, and indexing enables efficient data retrieval.",
+            "input_filename": [
+                "./output/001/aligned.bam: BAM format of aligned RNA-Seq reads"
+            ],
+            "output_filename": [
+                "./output/001/aligned_sorted.bam: sorted BAM format of aligned RNA-Seq reads",
+                "./output/001/aligned_sorted.bam.bai: index file for sorted BAM"
+            ],
+            "tools": "Samtools"
+        },
+        {
+            "step_number": 4,
+            "description": "Quantify gene expression levels using featureCounts. This tool counts reads mapped to genomic features (e.g., genes) to generate expression profiles for downstream differential expression analysis.",
+            "input_filename": [
+                "./output/001/aligned_sorted.bam: sorted BAM format of aligned RNA-Seq reads",
+                "./data/minigenome.gtf: genome annotation file"
+            ],
+            "output_filename": [
+                "./output/001/featurecounts.txt: gene expression counts"
+            ],
+            "tools": "featureCounts"
+        },
+        {
+            "step_number": 5,
+            "description": "Detect alternative splicing events using rMATS. This tool identifies differential splicing patterns (e.g., exon skipping, alternative 5'/3' splice sites) between conditions, leveraging biological replicates for robustness.",
+            "input_filename": [
+                "./output/001/aligned_sorted.bam: sorted BAM format of aligned RNA-Seq reads",
+                "./data/minigenome.gtf: genome annotation file"
+            ],
+            "output_filename": [
+                "./output/001/rmats_results.txt: alternative splicing events detected"
+            ],
+            "tools": "rMATS"
+        },
+        {
+            "step_number": 6,
+            "description": "Perform differential expression analysis using DESeq2. This step compares gene expression levels between conditions to identify significantly up/downregulated genes, accounting for biological variability and normalization.",
+            "input_filename": [
+                "./output/001/featurecounts.txt: gene expression counts"
+            ],
+            "output_filename": [
+                "./output/001/differential_expression_results.txt: differential expression analysis output"
+            ],
+            "tools": "DESeq2"
         }
     ]
 }

@@ -15,8 +15,9 @@ You should not write loading data as a separate step.
 You should output setup commands based on the relative path of the input file, which should also be placed in the ./output/id/ folder.
 You should not write anything else except for your JSON response.
 You should make your answer as detailed as possible.
+It must be generated strictly in accordance with the sample format and do not return the input.
 Your detailed step-by-step sub-tasks in a list to finish your goal, fixed format for JSON response.
-The key names of the JSON object must be "step_number", "description", "input_filename", "output_filename", and "tools".
+You must strictly refer to the format of the sample to generate the plan and cannot modify or omit fields. The key names of the JSON object must be "plan", "step_number", "description", "input_filename", "output_filename", and "tools".
 You should do as much analysis as you can with the tools you have.
 Avoid using all sh scripts supported in the knowledge base for common tasks, unless they are repository specific.
 Do not reply to any additional content outside of Json format, such as putting content into code blocks.

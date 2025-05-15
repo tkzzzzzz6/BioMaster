@@ -26,28 +26,35 @@
     # https://sg.uiuiapi.com/v1
 api:
   main:
-    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    key: ''
     base_url: 'https://api.siliconflow.cn/v1/'
   embedding:
-    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    key: ''
     base_url: 'https://api.siliconflow.cn/v1/'
+  # Ollama settings
+  ollama:
+    enabled: true
+    base_url: 'http://localhost:11434'
 
-# 模型配置
+
+# model settings
 models:
   main: "deepseek-ai/DeepSeek-V3"
   tool: "deepseek-ai/DeepSeek-V3"
   embedding: "BAAI/bge-m3"
 
-# Biomaster配置
+
+# Biomaster settings
 biomaster:
   executor: true
-  id: '002'
+  id: '005'
   generate_plan: true
+  use_ollama: true   
 
-# 数据和目标
+# datalist and goal
 data:
   files:
     - './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)'
     - './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)'
     - './data/minigenome.fa: small genome sequence consisting of ~750 genes.'
-  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.' 
+  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.'  

@@ -9,6 +9,10 @@
 **BioMaster** is a sophisticated, multi-agent framework that leverages large language models (LLMs) and dynamic knowledge retrieval to automate and streamline complex bioinformatics workflows. Designed specifically to tackle the challenges of modern bioinformatics, BioMaster improves accuracy, efficiency, reproducibility, and scalability across diverse omics data types, including RNA-seq, ChIP-seq, single-cell analysis, spatial transcriptomics, and Hi-C data processing.
 
 ---
+## News
+
+- 2025-05-15: Update the code to support ollama.
+- 2025-04-30: Update the code to support config.yaml to run the example.
 
 ## 🚀 Key Features
 
@@ -326,32 +330,70 @@ The example code is located in the `./examples/` folder.
     # https://sg.uiuiapi.com/v1
 api:
   main:
-    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    key: ''
     base_url: 'https://api.siliconflow.cn/v1/'
   embedding:
-    key: 'sk-fbrbrqtcmiurlfjhxdpykolghiflxbwqjeadaiitxdqazibs'
+    key: ''
     base_url: 'https://api.siliconflow.cn/v1/'
+  # Ollama settings
+  ollama:
+    enabled: true
+    base_url: 'http://localhost:11434'
 
-# 模型配置
+
+# model settings
 models:
   main: "deepseek-ai/DeepSeek-V3"
   tool: "deepseek-ai/DeepSeek-V3"
   embedding: "BAAI/bge-m3"
 
-# Biomaster配置
+
+# Biomaster settings
 biomaster:
   executor: true
-  id: '002'
+  id: '005'
   generate_plan: true
+  use_ollama: false  
 
-# 数据和目标
+# datalist and goal
 data:
   files:
     - './data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)'
     - './data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)'
     - './data/minigenome.fa: small genome sequence consisting of ~750 genes.'
-  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.' 
+  goal: 'please do WGS/WES data analysis Somatic SNV+indel calling.'  
 ```
+### How to Use Local LLM
+1. start ollama server:
+```bash
+ollama Serve
+```
+2. Download the model:
+```bash
+ollama run llama3:70b
+```
+3. If you want to use local LLM, you can set the following settings in `config.yaml`:
+```python
+ollama:
+    enabled: true
+    base_url: 'http://localhost:11434'
+
+# model settings
+models:
+  main: "llama3:70b"
+  tool: "llama3:70b"
+  embedding: "bge-m3"
+
+
+# Biomaster settings
+biomaster:
+  executor: true
+  id: '005'
+  generate_plan: true
+  use_ollama: true 
+```
+Note: If you want to use local LLM, suggest you choose the model which more than 30B.
+
 #### How to Read the Output
 
 Biomaster stores all output files in the `./output/` directory.

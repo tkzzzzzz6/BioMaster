@@ -1,0 +1,99 @@
+{
+    "plan": [
+        {
+            "step_number": 1,
+            "description": "Perform quality control and adapter trimming on the RNA-Seq data using Trimmomatic. This will remove low-quality bases and adapter sequences to ensure clean data for downstream analysis.",
+            "input_filename": [
+                "./data/rnaseq_1.fastq.gz: RNA-Seq read 1 data (left read)",
+                "./data/rnaseq_2.fastq.gz: RNA-Seq read 2 data (right read)"
+            ],
+            "output_filename": [
+                "./output/005/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data",
+                "./output/005/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data"
+            ],
+            "tools": "Trimmomatic"
+        },
+        {
+            "step_number": 2,
+            "description": "Align the trimmed RNA-Seq reads to the reference genome using STAR aligner. This will map the RNA-Seq reads to their genomic locations, accounting for splice junctions.",
+            "input_filename": [
+                "./output/005/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data",
+                "./output/005/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/005/aligned_rnaseq.bam: aligned RNA-Seq data in BAM format"
+            ],
+            "tools": "STAR"
+        },
+        {
+            "step_number": 3,
+            "description": "Sort the BAM file and mark duplicates using Picard tools. This will ensure proper sorting of alignments and identification of PCR duplicates.",
+            "input_filename": [
+                "./output/005/aligned_rnaseq.bam: aligned RNA-Seq data in BAM format"
+            ],
+            "output_filename": [
+                "./output/005/sorted_rnaseq.bam: sorted and duplicate-marked BAM file"
+            ],
+            "tools": "Picard"
+        },
+        {
+            "step_number": 4,
+            "description": "Perform base quality score recalibration (BQSR) using GATK. This will correct systematic errors in the base quality scores to improve variant calling accuracy.",
+            "input_filename": [
+                "./output/005/sorted_rnaseq.bam: sorted and duplicate-marked BAM file",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/005/recalibrated_rnaseq.bam: recalibrated BAM file"
+            ],
+            "tools": "GATK"
+        },
+        {
+            "step_number": 5,
+            "description": "Call somatic variants (SNVs and indels) using Mutect2 from GATK. This specialized caller identifies tumor-specific variants while accounting for normal tissue background.",
+            "input_filename": [
+                "./output/005/recalibrated_rnaseq.bam: recalibrated BAM file",
+                "./data/minigenome.fa: small genome sequence consisting of ~750 genes."
+            ],
+            "output_filename": [
+                "./output/005/somatic_variants.vcf: called somatic variants in VCF format"
+            ],
+            "tools": "GATK Mutect2"
+        },
+        {
+            "step_number": 6,
+            "description": "Filter the somatic variants using GATK's FilterMutectCalls. This will remove low-confidence calls and artifacts, leaving only high-quality somatic variants.",
+            "input_filename": [
+                "./output/005/somatic_variants.vcf: called somatic variants in VCF format"
+            ],
+            "output_filename": [
+                "./output/005/filtered_somatic_variants.vcf: filtered high-confidence somatic variants"
+            ],
+            "tools": "GATK FilterMutectCalls"
+        },
+        {
+            "step_number": 7,
+            "description": "Annotate the filtered variants using VEP (Variant Effect Predictor). This will provide functional consequences of the variants, including gene names, protein effects, and predicted impacts.",
+            "input_filename": [
+                "./output/005/filtered_somatic_variants.vcf: filtered high-confidence somatic variants"
+            ],
+            "output_filename": [
+                "./output/005/annotated_somatic_variants.vcf: annotated somatic variants with functional predictions"
+            ],
+            "tools": "VEP"
+        },
+        {
+            "step_number": 8,
+            "description": "Perform splice variant analysis using rMATS to detect alternative splicing events. This specialized analysis will identify differential splicing between conditions using the RNA-Seq data.",
+            "input_filename": [
+                "./output/005/trimmed_rnaseq_1.fastq.gz: trimmed RNA-Seq read 1 data",
+                "./output/005/trimmed_rnaseq_2.fastq.gz: trimmed RNA-Seq read 2 data"
+            ],
+            "output_filename": [
+                "./output/005/splicing_analysis_results.txt: rMATS alternative splicing analysis results"
+            ],
+            "tools": "rMATS"
+        }
+    ]
+}

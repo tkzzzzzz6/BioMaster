@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import re
+import requests
 from typing import Dict, List, Tuple, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -14,11 +15,19 @@ class CheckAgent:
     - Update status in DEBUG_Output file
     """
     
-    def __init__(self, api_key: str, base_url: str, model: str = "o1-2024-12-17", **kwargs):
+    def __init__(self, api_key: str, base_url: str, model: str, 
+                 use_ollama: bool = False, 
+                 ollama_base_url: str = "http://localhost:11434",
+                 ollama_model: str = "qwen3:32b"):
         # Set up logging
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
+        self.api_key = api_key
+        self.base_url = base_url
         self.model = ChatOpenAI(model=model, base_url=base_url)
+        self.use_ollama = use_ollama
+        self.ollama_base_url = ollama_base_url
+        self.ollama_model = ollama_model
         
         # Create prompt template
         self.file_prompt = ChatPromptTemplate.from_messages([
@@ -88,184 +97,178 @@ class CheckAgent:
         return {}
     
     def check_output_files(self, debug_output_path: str) -> Dict[str, Any]:
-        """
-        Main check function: Check if files exist and are non-empty, scan directory for analysis if not
-        Returns a dictionary with analysis and stats
-        """
-        # Check and load DEBUG_Output file
-        if not os.path.exists(debug_output_path):
-            return {
-                "analysis": "DEBUG_Output file doesn't exist",
-                "stats": False
-            }
-            
+        """Check if output files declared in debug output actually exist"""
+        
+        # Read DEBUG output file
         try:
-            with open(debug_output_path, 'r', encoding='utf-8') as debug_file:
-                debug_output = json.load(debug_file)
-        except:
-            return {
-                "analysis": "Failed to read DEBUG_Output file",
-                "stats": False
-            }
-        
-        # Keep original stats value
-        original_stats = debug_output.get("stats", True)
-        
-        # Extract task ID and step number from path
-        path_match = re.search(r'(\d+)_DEBUG_Output_(\d+)\.json', debug_output_path)
-        if not path_match:
-            return {
-                "analysis": "Failed to extract task ID and step number from path",
-                "stats": False
-            }
-        
-        task_id = path_match.group(1)
-        step_number = path_match.group(2)
-        output_dir = f"./output/{task_id}"
-        
-        # Get expected output file list
-        output_files = debug_output.get("output_filename", [])
-        expected_files = []
-        for file_entry in output_files:
-            if ':' in file_entry:
-                path = file_entry.split(':', 1)[0].strip()
-            else:
-                path = file_entry.strip()
-            expected_files.append(path)
-        
-        # 1. Check if all expected files exist and are non-empty
-        if expected_files:
-            all_valid = True
-            has_empty_file = False
-            failed_files = []
+            with open(debug_output_path, 'r', encoding='utf-8') as f:
+                debug_data = json.load(f)
+                
+            # Get declared output file list
+            output_filenames = debug_data.get("output_filename", [])
             
-            for file_path in expected_files:
-                valid, message = self.check_file_size(file_path)
-                if not valid:
-                    all_valid = False
-                    failed_files.append(message)
-                    if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
-                        has_empty_file = True
+            if not output_filenames:
+                logging.warning(f"No output files declared in DEBUG output: {debug_output_path}")
+                return {"stats": True, "analysis": "No output files declared"}
+                
+            # Files that actually exist
+            existing_files = []
+            missing_files = []
             
-            if has_empty_file:
+            for file_path in output_filenames:
+                # Extract actual file path (may include description)
+                if ":" in file_path:
+                    file_path = file_path.split(":")[0].strip()
+                    
+                if os.path.exists(file_path):
+                    existing_files.append(file_path)
+                else:
+                    missing_files.append(file_path)
+                    
+            # If all declared files exist
+            if not missing_files:
                 return {
-                    "analysis": "there's an empty file",
-                    "stats": False
+                    "stats": True,
+                    "analysis": f"All {len(existing_files)} output files exist",
+                    "existing_files": existing_files,
+                    "output_filename": output_filenames
                 }
             
-            # If all expected files are valid, return success without changing stats
-            if all_valid:
-                with open(debug_output_path, 'w', encoding='utf-8') as out_file:
-                    json.dump(debug_output, out_file, indent=4)
-                return {
-                    "analysis": "All expected files exist and are non-empty",
-                    "stats": True
-                }
-                    
-        # 2. If no expected files or missing expected files, scan directory
-        all_files = self.scan_directory(output_dir)
-        if not all_files:
-            # No files found, but don't change stats
-            analysis_message = f"No files found in {output_dir}"
-            debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\n{analysis_message}"
+            # If some files are missing, provide analysis
+            analysis = self._analyze_missing_files(debug_data, missing_files, existing_files)
             
-            with open(debug_output_path, 'w', encoding='utf-8') as out_file:
-                json.dump(debug_output, out_file, indent=4)
+            # Update stats field in DEBUG output file
+            debug_data["stats"] = False
+            debug_data["analyze"] = debug_data.get("analyze", "") + "\n\nFile verification failed: " + analysis
             
+            with open(debug_output_path, 'w', encoding='utf-8') as f:
+                json.dump(debug_data, f, indent=2, ensure_ascii=False)
+                
             return {
-                "analysis": analysis_message,
-                "stats": False
+                "stats": False, 
+                "analysis": analysis,
+                "missing_files": missing_files,
+                "existing_files": existing_files,
+                "output_filename": existing_files  # Only return files that actually exist
             }
+            
+        except Exception as e:
+            logging.error(f"Error checking output files: {str(e)}")
+            return {"stats": False, "analysis": f"Error during verification: {str(e)}"}
+    
+    def _analyze_missing_files(self, debug_data: Dict, missing_files: List[str], existing_files: List[str]) -> str:
+        """Analyze reason for missing files"""
         
-        # 3. Get step details and format file list
-        step_details = self.get_step_details(task_id, step_number)
-        file_list_text = "\n".join([f"- {f['path']} ({f['size']} bytes)" for f in all_files])
+        # Extract script content and output
+        shell_commands = debug_data.get("shell", [])
+        result_output = debug_data.get("result", "")
         
-        # 4. Call LLM for analysis
-        response = self.file_prompt.invoke({
-            "step_number": step_details.get("step_number", "unknown"),
-            "tool_name": step_details.get("tools", "unknown"),
-            "step_description": step_details.get("description", "unknown"),
-            "file_list": file_list_text,
-            "expected_files": ", ".join(expected_files) if expected_files else "not specified"
-        })
+        # Build analysis prompt
+        if self.use_ollama:
+            return self._analyze_with_ollama(shell_commands, result_output, missing_files, existing_files)
+        else:
+            return self._analyze_with_api(shell_commands, result_output, missing_files, existing_files)
+            
+    def _analyze_with_api(self, shell_commands, result_output, missing_files, existing_files):
+        """Analyze missing files using API"""
+        prompt = f"""
+        Analyze the following Shell commands and execution results to explain why these files were not created:
         
-        result = self.model.invoke(response)
+        Missing files:
+        {missing_files}
         
-        # 5. Parse model response
-        try:
-            model_response = json.loads(result.content)
-            analysis = model_response.get("analysis", "")
-            new_output_files = model_response.get("output_filename", [])
-            model_stats = model_response.get("stats", True)  # Default to True
-        except:
-            analysis = "Failed to parse LLM response, but continuing processing"
-            new_output_files = []
-            model_stats = True
+        Existing files:
+        {existing_files}
         
-        # 6. Update PLAN.json if new output files found
-        if model_stats and new_output_files:
-            plan_path = f"./output/{task_id}_PLAN.json"
-            if os.path.exists(plan_path):
-                try:
-                    with open(plan_path, 'r', encoding='utf-8') as plan_file:
-                        plan_data = json.load(plan_file)
-                    
-                    # Find current step and next step
-                    current_step = None
-                    next_step = None
-                    steps = plan_data.get("plan", [])
-                    
-                    for i, step in enumerate(steps):
-                        if str(step.get("step_number", "")) == step_number:
-                            current_step = step
-                            if i + 1 < len(steps):
-                                next_step = steps[i + 1]
-                            break
-                    
-                    # Update current step's output_filename
-                    if current_step:
-                        current_outputs = current_step.get("output_filename", [])
-                        existing_paths = [f.split(": ")[0] if ": " in f else f for f in current_outputs]
-                        
-                        for file in new_output_files:
-                            file_path = file.split(": ")[0] if ": " in file else file
-                            if file_path not in existing_paths:
-                                current_outputs.append(file)
-                                existing_paths.append(file_path)
-                        
-                        current_step["output_filename"] = current_outputs
-                    
-                    # Update next step's input_filename
-                    if next_step:
-                        next_inputs = next_step.get("input_filename", [])
-                        existing_paths = [f.split(": ")[0] if ": " in f else f for f in next_inputs]
-                        
-                        for file in new_output_files:
-                            file_path = file.split(": ")[0] if ": " in file else file
-                            if file_path not in existing_paths:
-                                next_inputs.append(file)
-                                existing_paths.append(file_path)
-                        
-                        next_step["input_filename"] = next_inputs
-                    
-                    # Save updated PLAN.json
-                    with open(plan_path, 'w', encoding='utf-8') as plan_file:
-                        json.dump(plan_data, plan_file, indent=4)
-                except Exception as e:
-                    analysis += f"\nError updating PLAN.json: {str(e)}"
+        Shell commands:
+        {shell_commands}
         
-        # 7. Update DEBUG_Output file
-        # Maintain original stats unless file exists but is empty
-        debug_output["analyze"] = debug_output.get("analyze", "") + f"\n\n{analysis}"
-        if new_output_files:
-            debug_output["output_filename"] = new_output_files
+        Execution results:
+        {result_output}
         
-        with open(debug_output_path, 'w', encoding='utf-8') as out_file:
-            json.dump(debug_output, out_file, indent=4)
+        Please analyze possible reasons.
+        """
         
-        return {
-            "analysis": analysis,
-            "output_filename": new_output_files,
-            "stats": model_stats and debug_output.get("stats", True)  # Return combined status
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
         }
+        
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a professional bioinformatics assistant skilled at analyzing Shell script execution issues."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=data
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                analysis = result["choices"][0]["message"]["content"]
+                return analysis
+            else:
+                logging.error(f"API response error: {response.status_code} - {response.text}")
+                return f"Unable to analyze reason. API error: {response.status_code}"
+        except Exception as e:
+            logging.error(f"API request error: {str(e)}")
+            return f"Unable to analyze reason. Request error: {str(e)}"
+    
+    def _analyze_with_ollama(self, shell_commands, result_output, missing_files, existing_files):
+        """Analyze missing files using Ollama"""
+        prompt = f"""
+        Analyze the following Shell commands and execution results to explain why these files were not created:
+        
+        Missing files:
+        {missing_files}
+        
+        Existing files:
+        {existing_files}
+        
+        Shell commands:
+        {shell_commands}
+        
+        Execution results:
+        {result_output}
+        
+        Please analyze possible reasons.
+        """
+        
+        system_prompt = "You are a professional bioinformatics assistant skilled at analyzing Shell script execution issues."
+        
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.ollama_model,
+            "prompt": prompt,
+            "system": system_prompt,
+            "stream": False
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.ollama_base_url}/api/generate", 
+                headers=headers,
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                analysis = result.get("response", "")
+                # Filter out thinking process
+                analysis = re.sub(r'<think>.*?</think>', '', analysis, flags=re.DOTALL)
+                return analysis
+            else:
+                logging.error(f"Ollama API error: {response.status_code} - {response.text}")
+                return f"Unable to analyze reason. Ollama API error: {response.status_code}"
+        except Exception as e:
+            logging.error(f"Error requesting Ollama API: {str(e)}")
+            return f"Unable to analyze reason. Request error: {str(e)}"
